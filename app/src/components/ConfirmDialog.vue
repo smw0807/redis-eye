@@ -25,7 +25,7 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted } from 'vue';
 
-const props = defineProps<{
+const { title, message, confirmText, cancelText, type } = defineProps<{
   title?: string;
   message: string;
   confirmText?: string;
