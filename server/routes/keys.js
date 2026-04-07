@@ -19,16 +19,18 @@ router.get('/keys', async (req, res) => {
     const client = getClient()
     const [nextCursor, keys] = await client.scan(cursor, 'MATCH', match, 'COUNT', count)
 
-    // Get type for each key (pipeline for efficiency)
+    // Get type and TTL for each key (pipeline for efficiency)
     const pipeline = client.pipeline()
     for (const key of keys) {
       pipeline.type(key)
+      pipeline.pttl(key)
     }
-    const typeResults = await pipeline.exec()
+    const results = await pipeline.exec()
 
     const items = keys.map((key, i) => ({
       key,
-      type: typeResults[i]?.[1] ?? 'unknown',
+      type: results[i * 2]?.[1] ?? 'unknown',
+      ttl: results[i * 2 + 1]?.[1] ?? -1,
     }))
 
     res.json({ cursor: nextCursor, items, done: nextCursor === '0' })
