@@ -13,26 +13,31 @@
           <span class="conn-db">DB {{ currentDb }}</span>
         </div>
         <div class="sidebar-actions">
-          <select
-            v-if="dbs.length > 0"
-            class="db-select input-field"
-            :value="currentDb"
-            @change="switchDb($event)"
-          >
-            <option v-for="d in dbs" :key="d.db" :value="d.db">db{{ d.db }} ({{ d.keys }})</option>
-          </select>
-          <div class="action-buttons">
-            <button class="btn btn-primary add-key-btn" @click="showAddModal = true">+ New</button>
-            <button
-              class="btn btn-secondary icon-btn"
-              title="Refresh key list"
-              @click="keyListRef?.refresh()"
+          <div class="db-row">
+            <select
+              v-if="dbs.length > 0"
+              class="db-select input-field"
+              :value="currentDb"
+              @change="switchDb($event)"
             >
-              ↻
-            </button>
+              <option v-for="d in dbs" :key="d.db" :value="d.db">
+                db{{ d.db }} ({{ d.keys }})
+              </option>
+            </select>
             <button class="btn btn-secondary disconnect-btn" @click="disconnect">Disconnect</button>
           </div>
         </div>
+      </div>
+
+      <div class="key-list-toolbar">
+        <button class="btn btn-primary add-key-btn" @click="showAddModal = true">+ Add Key</button>
+        <button
+          class="btn btn-secondary icon-btn"
+          title="Refresh key list"
+          @click="keyListRef?.refresh()"
+        >
+          ↻
+        </button>
       </div>
 
       <KeyList ref="keyListRef" :selected-key="selectedKey" @select="selectKey" />
@@ -235,31 +240,44 @@ onMounted(async () => {
   gap: 6px;
 }
 
-.db-select {
-  width: 100%;
-  padding: 4px 8px;
-  font-size: 12px;
-}
-
-.action-buttons {
+.db-row {
   display: flex;
   gap: 6px;
   align-items: center;
 }
 
-.add-key-btn {
-  font-size: 12px;
-  padding: 4px 10px;
-}
-
-.icon-btn {
-  font-size: 14px;
+.db-select {
+  flex: 1;
+  min-width: 0;
   padding: 4px 8px;
+  font-size: 12px;
 }
 
 .disconnect-btn {
   font-size: 12px;
   padding: 4px 10px;
+  white-space: nowrap;
+}
+
+.key-list-toolbar {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  justify-content: flex-end;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border);
+}
+
+.add-key-btn {
+  flex: 1;
+  font-size: 12px;
+  padding: 4px 10px;
+  justify-content: center;
+}
+
+.icon-btn {
+  font-size: 14px;
+  padding: 4px 8px;
 }
 
 /* Main */
