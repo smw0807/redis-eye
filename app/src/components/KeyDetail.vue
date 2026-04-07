@@ -314,11 +314,22 @@
       </div>
     </template>
   </div>
+
+  <ConfirmDialog
+    v-if="confirmState"
+    :title="confirmState.title"
+    :message="confirmState.message"
+    :confirm-text="confirmState.confirmText"
+    :type="confirmState.type"
+    @confirm="onConfirmOk"
+    @cancel="onConfirmCancel"
+  />
 </template>
 
 <script setup lang="ts">
 import { ref, watch, computed, nextTick } from 'vue';
 import TypeBadge from './TypeBadge.vue';
+import ConfirmDialog from './ConfirmDialog.vue';
 
 interface KeyDetail {
   key: string;
@@ -338,6 +349,35 @@ const loading = ref(false);
 const error = ref('');
 const saving = ref(false);
 const saveError = ref('');
+
+// Confirm dialog
+interface ConfirmOptions {
+  title?: string;
+  message: string;
+  confirmText?: string;
+  type?: 'danger' | 'primary';
+}
+const confirmState = ref<ConfirmOptions | null>(null);
+let confirmResolve: ((v: boolean) => void) | null = null;
+
+function openConfirm(options: ConfirmOptions): Promise<boolean> {
+  return new Promise((resolve) => {
+    confirmResolve = resolve;
+    confirmState.value = options;
+  });
+}
+
+function onConfirmOk() {
+  confirmState.value = null;
+  confirmResolve?.(true);
+  confirmResolve = null;
+}
+
+function onConfirmCancel() {
+  confirmState.value = null;
+  confirmResolve?.(false);
+  confirmResolve = null;
+}
 
 // Key name editing
 const editingKeyName = ref(false);
@@ -401,7 +441,13 @@ async function fetchDetail(key: string) {
 
 async function deleteKey() {
   if (!detail.value) return;
-  if (!confirm(`Delete key "${detail.value.key}"?`)) return;
+  const ok = await openConfirm({
+    title: '키 삭제',
+    message: `"${detail.value.key}" 키를 삭제하시겠습니까?`,
+    confirmText: '삭제',
+    type: 'danger',
+  });
+  if (!ok) return;
 
   try {
     await fetch(`/api/key/${encodeKey(detail.value.key)}`, { method: 'DELETE' });
@@ -433,6 +479,14 @@ async function saveKeyName() {
     cancelEditKeyName();
     return;
   }
+
+  const ok = await openConfirm({
+    title: '키 이름 변경',
+    message: `"${detail.value.key}" → "${newKey}"으로 변경하시겠습니까?`,
+    confirmText: '변경',
+    type: 'primary',
+  });
+  if (!ok) return;
 
   saving.value = true;
   saveError.value = '';
@@ -480,6 +534,14 @@ async function saveTtl() {
     return;
   }
 
+  const ok = await openConfirm({
+    title: 'TTL 수정',
+    message: `TTL을 ${seconds}초로 변경하시겠습니까?`,
+    confirmText: '변경',
+    type: 'primary',
+  });
+  if (!ok) return;
+
   saving.value = true;
   saveError.value = '';
   try {
@@ -504,6 +566,14 @@ async function saveTtl() {
 
 async function persistTtl() {
   if (!detail.value) return;
+  const ok = await openConfirm({
+    title: 'TTL 제거',
+    message: 'TTL을 제거하고 영구 키로 설정하시겠습니까?',
+    confirmText: '영구화',
+    type: 'primary',
+  });
+  if (!ok) return;
+
   saving.value = true;
   saveError.value = '';
   try {
@@ -549,6 +619,14 @@ function formatJsonInEditor() {
 
 async function saveStringValue() {
   if (!detail.value) return;
+  const ok = await openConfirm({
+    title: '값 수정',
+    message: '문자열 값을 저장하시겠습니까?',
+    confirmText: '저장',
+    type: 'primary',
+  });
+  if (!ok) return;
+
   saving.value = true;
   saveError.value = '';
   try {
@@ -586,6 +664,14 @@ function cancelEditHashField() {
 
 async function saveHashField(field: string) {
   if (!detail.value) return;
+  const ok = await openConfirm({
+    title: '필드 수정',
+    message: `"${field}" 필드 값을 저장하시겠습니까?`,
+    confirmText: '저장',
+    type: 'primary',
+  });
+  if (!ok) return;
+
   saving.value = true;
   saveError.value = '';
   try {
@@ -611,7 +697,13 @@ async function saveHashField(field: string) {
 
 async function deleteHashField(field: string) {
   if (!detail.value) return;
-  if (!confirm(`필드 "${field}"를 삭제하시겠습니까?`)) return;
+  const ok = await openConfirm({
+    title: '필드 삭제',
+    message: `"${field}" 필드를 삭제하시겠습니까?`,
+    confirmText: '삭제',
+    type: 'danger',
+  });
+  if (!ok) return;
 
   saving.value = true;
   saveError.value = '';
@@ -690,6 +782,14 @@ function cancelEditListItem() {
 
 async function saveListItem(index: number) {
   if (!detail.value) return;
+  const ok = await openConfirm({
+    title: '아이템 수정',
+    message: `인덱스 ${index}의 값을 저장하시겠습니까?`,
+    confirmText: '저장',
+    type: 'primary',
+  });
+  if (!ok) return;
+
   saving.value = true;
   saveError.value = '';
   try {
