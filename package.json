@@ -1,0 +1,43 @@
+{
+  "name": "redis-eye",
+  "version": "0.1.0",
+  "description": "Lightweight Redis GUI — explore your Redis data with a single npx command",
+  "main": "server/index.js",
+  "bin": {
+    "redis-eye": "bin/cli.js"
+  },
+  "files": [
+    "bin/",
+    "server/",
+    "dist/"
+  ],
+  "scripts": {
+    "start": "node bin/cli.js",
+    "dev": "concurrently -n server,app -c cyan,magenta \"npm run dev:server\" \"npm run dev:app\"",
+    "dev:server": "nodemon server/index.js",
+    "dev:app": "cd app && npm run dev",
+    "build": "cd app && npm install && npm run build"
+  },
+  "keywords": [
+    "redis",
+    "gui",
+    "viewer",
+    "cli",
+    "npx"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "conf": "^12.0.0",
+    "express": "^4.18.2",
+    "ioredis": "^5.3.2",
+    "open": "^9.1.0"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.0",
+    "nodemon": "^3.1.0"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
