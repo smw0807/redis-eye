@@ -883,7 +883,7 @@ watch(
 .btn-icon {
   background: none;
   border: none;
-  color: var(--text-secondary);
+  color: var(--text-primary);
   padding: 2px 4px;
   font-size: 13px;
   border-radius: var(--radius-sm);
