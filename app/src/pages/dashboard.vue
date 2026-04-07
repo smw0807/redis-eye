@@ -21,15 +21,17 @@
           >
             <option v-for="d in dbs" :key="d.db" :value="d.db">db{{ d.db }} ({{ d.keys }})</option>
           </select>
-          <button class="btn btn-primary add-key-btn" @click="showAddModal = true">+ New</button>
-          <button
-            class="btn btn-secondary icon-btn"
-            title="Refresh key list"
-            @click="keyListRef?.refresh()"
-          >
-            ↻
-          </button>
-          <button class="btn btn-secondary disconnect-btn" @click="disconnect">Disconnect</button>
+          <div class="action-buttons">
+            <button class="btn btn-primary add-key-btn" @click="showAddModal = true">+ New</button>
+            <button
+              class="btn btn-secondary icon-btn"
+              title="Refresh key list"
+              @click="keyListRef?.refresh()"
+            >
+              ↻
+            </button>
+            <button class="btn btn-secondary disconnect-btn" @click="disconnect">Disconnect</button>
+          </div>
         </div>
       </div>
 
@@ -49,7 +51,7 @@
         <span class="info-item" :class="info.role">{{ info.role }}</span>
       </div>
 
-      <KeyDetail :key-name="selectedKey" @deleted="onKeyDeleted" />
+      <KeyDetail :key-name="selectedKey" @deleted="onKeyDeleted" @renamed="onKeyRenamed" />
     </main>
   </div>
 
@@ -134,6 +136,11 @@ function selectKey(key: string) {
 
 function onKeyDeleted(_key: string) {
   selectedKey.value = null;
+  keyListRef.value?.refresh();
+}
+
+function onKeyRenamed(_oldKey: string, newKey: string) {
+  selectedKey.value = newKey;
   keyListRef.value?.refresh();
 }
 
@@ -224,14 +231,20 @@ onMounted(async () => {
 
 .sidebar-actions {
   display: flex;
+  flex-direction: column;
   gap: 6px;
-  align-items: center;
 }
 
 .db-select {
-  flex: 1;
+  width: 100%;
   padding: 4px 8px;
   font-size: 12px;
+}
+
+.action-buttons {
+  display: flex;
+  gap: 6px;
+  align-items: center;
 }
 
 .add-key-btn {

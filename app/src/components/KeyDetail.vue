@@ -16,39 +16,195 @@
     <!-- Key detail -->
     <template v-else-if="detail">
       <div class="detail-header">
-        <div class="detail-key-name mono">{{ detail.key }}</div>
+        <!-- Key name (inline rename) -->
+        <div class="detail-key-name-row">
+          <template v-if="!editingKeyName">
+            <div class="key-name-group">
+              <div class="detail-key-name mono" :title="detail.key">{{ detail.key }}</div>
+              <button class="btn-icon" title="키 이름 변경" @click="startEditKeyName">✎</button>
+            </div>
+          </template>
+          <template v-else>
+            <input
+              ref="keyNameInput"
+              v-model="pendingKeyName"
+              class="inline-input key-input mono"
+              @keydown.enter="saveKeyName"
+              @keydown.esc="cancelEditKeyName"
+            />
+            <button class="btn btn-primary btn-xs" :disabled="saving" @click="saveKeyName">
+              Save
+            </button>
+            <button class="btn btn-secondary btn-xs" @click="cancelEditKeyName">Cancel</button>
+          </template>
+        </div>
+
         <div class="detail-meta">
           <TypeBadge :type="detail.type" />
-          <span class="ttl-badge" :class="{ expired: detail.ttl === -2 }">
-            {{ formatTtl(detail.ttl) }}
-          </span>
+
+          <!-- TTL (inline edit) -->
+          <template v-if="!editingTtl">
+            <span
+              class="ttl-badge"
+              :class="{ expired: detail.ttl === -2, 'ttl-editable': detail.ttl !== -2 }"
+              :title="detail.ttl !== -2 ? 'TTL 수정' : undefined"
+              @click="detail.ttl !== -2 && startEditTtl()"
+            >
+              {{ formatTtl(detail.ttl) }}
+            </span>
+          </template>
+          <template v-else>
+            <div class="ttl-editor">
+              <input
+                ref="ttlInput"
+                v-model="pendingTtl"
+                type="number"
+                min="1"
+                placeholder="초(seconds)"
+                class="inline-input ttl-input"
+                @keydown.enter="saveTtl"
+                @keydown.esc="cancelEditTtl"
+              />
+              <button class="btn btn-primary btn-xs" :disabled="saving" @click="saveTtl">
+                Set
+              </button>
+              <button class="btn btn-secondary btn-xs" :disabled="saving" @click="persistTtl">
+                Persist
+              </button>
+              <button class="btn btn-secondary btn-xs" @click="cancelEditTtl">Cancel</button>
+            </div>
+          </template>
+
           <button class="btn btn-danger btn-sm" @click="deleteKey">Delete</button>
         </div>
+
+        <div v-if="saveError" class="save-error">{{ saveError }}</div>
       </div>
 
       <!-- String -->
       <div v-if="detail.type === 'string'" class="value-section">
-        <pre class="value-pre">{{ detail.value }}</pre>
-        <div v-if="isJson(detail.value as string)" class="json-view">
-          <div class="section-label">Parsed JSON</div>
-          <pre class="value-pre json">{{ prettyJson(detail.value as string) }}</pre>
-        </div>
+        <template v-if="!editingString">
+          <div class="section-header">
+            <div class="section-label">Value</div>
+            <div class="section-actions">
+              <button
+                v-if="isJson(detail.value as string)"
+                class="btn btn-secondary btn-xs"
+                @click="jsonExpanded = !jsonExpanded"
+              >
+                {{ jsonExpanded ? '▼ Collapse JSON' : '▶ Expand JSON' }}
+              </button>
+              <button class="btn btn-secondary btn-xs" @click="startEditString">Edit</button>
+            </div>
+          </div>
+          <pre class="value-pre">{{ detail.value }}</pre>
+          <template v-if="isJson(detail.value as string) && jsonExpanded">
+            <div class="section-label" style="margin-top: 10px">Parsed JSON</div>
+            <pre class="value-pre json">{{ prettyJson(detail.value as string) }}</pre>
+          </template>
+        </template>
+        <template v-else>
+          <div class="section-header">
+            <div class="section-label">Editing Value</div>
+            <div class="section-actions">
+              <button
+                class="btn btn-secondary btn-xs"
+                :disabled="!isJson(pendingString)"
+                @click="formatJsonInEditor"
+              >
+                Format JSON
+              </button>
+              <button class="btn btn-primary btn-xs" :disabled="saving" @click="saveStringValue">
+                Save
+              </button>
+              <button class="btn btn-secondary btn-xs" @click="cancelEditString">Cancel</button>
+            </div>
+          </div>
+          <textarea v-model="pendingString" class="value-textarea" rows="12" />
+        </template>
       </div>
 
       <!-- Hash -->
       <div v-else-if="detail.type === 'hash'" class="value-section">
-        <div class="section-label">{{ Object.keys(hashValue).length }} fields</div>
+        <div class="section-header">
+          <div class="section-label">{{ Object.keys(hashValue).length }} fields</div>
+          <button class="btn btn-secondary btn-xs" @click="startAddHashField">+ Add Field</button>
+        </div>
         <table class="kv-table">
           <thead>
             <tr>
               <th>Field</th>
               <th>Value</th>
+              <th class="th-actions">Actions</th>
             </tr>
           </thead>
           <tbody>
             <tr v-for="(v, k) in hashValue" :key="k">
               <td class="mono cell-field">{{ k }}</td>
-              <td class="mono cell-value">{{ v }}</td>
+              <td class="mono cell-value">
+                <template v-if="editingHashField === String(k)">
+                  <input
+                    v-model="pendingHashValue"
+                    class="inline-input w-full"
+                    @keydown.enter="saveHashField(String(k))"
+                    @keydown.esc="cancelEditHashField"
+                  />
+                </template>
+                <template v-else>{{ v }}</template>
+              </td>
+              <td class="cell-actions">
+                <template v-if="editingHashField === String(k)">
+                  <button
+                    class="btn btn-primary btn-xs"
+                    :disabled="saving"
+                    @click="saveHashField(String(k))"
+                  >
+                    Save
+                  </button>
+                  <button class="btn btn-secondary btn-xs" @click="cancelEditHashField">
+                    Cancel
+                  </button>
+                </template>
+                <template v-else>
+                  <button
+                    class="btn btn-secondary btn-xs"
+                    @click="startEditHashField(String(k), String(v))"
+                  >
+                    Edit
+                  </button>
+                  <button class="btn btn-danger btn-xs" @click="deleteHashField(String(k))">
+                    Del
+                  </button>
+                </template>
+              </td>
+            </tr>
+            <!-- Add new field row -->
+            <tr v-if="addingHashField" class="new-row">
+              <td>
+                <input
+                  v-model="newHashFieldName"
+                  placeholder="Field name"
+                  class="inline-input w-full"
+                />
+              </td>
+              <td>
+                <input
+                  v-model="newHashFieldValue"
+                  placeholder="Value"
+                  class="inline-input w-full"
+                  @keydown.enter="submitAddHashField"
+                />
+              </td>
+              <td class="cell-actions">
+                <button
+                  class="btn btn-primary btn-xs"
+                  :disabled="saving"
+                  @click="submitAddHashField"
+                >
+                  Add
+                </button>
+                <button class="btn btn-secondary btn-xs" @click="cancelAddHashField">Cancel</button>
+              </td>
             </tr>
           </tbody>
         </table>
@@ -56,21 +212,69 @@
 
       <!-- List -->
       <div v-else-if="detail.type === 'list'" class="value-section">
-        <div class="section-label">
-          {{ listInfo.total }} items
-          <span v-if="listInfo.truncated" class="truncated-note">(showing first 500)</span>
+        <div class="section-header">
+          <div class="section-label">
+            {{ listInfo.total }} items
+            <span v-if="listInfo.truncated" class="truncated-note">(showing first 500)</span>
+          </div>
         </div>
         <table class="kv-table">
           <thead>
             <tr>
-              <th>#</th>
+              <th class="th-idx">#</th>
               <th>Value</th>
+              <th class="th-actions">Actions</th>
             </tr>
           </thead>
           <tbody>
             <tr v-for="(item, idx) in listInfo.items" :key="idx">
               <td class="cell-index">{{ idx }}</td>
-              <td class="mono cell-value">{{ item }}</td>
+              <td class="mono cell-value">
+                <template v-if="editingListIndex === idx">
+                  <input
+                    v-model="pendingListValue"
+                    class="inline-input w-full"
+                    @keydown.enter="saveListItem(idx)"
+                    @keydown.esc="cancelEditListItem"
+                  />
+                </template>
+                <template v-else>{{ item }}</template>
+              </td>
+              <td class="cell-actions">
+                <template v-if="editingListIndex === idx">
+                  <button
+                    class="btn btn-primary btn-xs"
+                    :disabled="saving"
+                    @click="saveListItem(idx)"
+                  >
+                    Save
+                  </button>
+                  <button class="btn btn-secondary btn-xs" @click="cancelEditListItem">
+                    Cancel
+                  </button>
+                </template>
+                <template v-else>
+                  <button class="btn btn-secondary btn-xs" @click="startEditListItem(idx, item)">
+                    Edit
+                  </button>
+                  <button
+                    class="btn btn-secondary btn-xs icon-btn"
+                    title="위로 이동"
+                    :disabled="idx === 0 || listInfo.truncated"
+                    @click="moveListItem(idx, idx - 1)"
+                  >
+                    ▲
+                  </button>
+                  <button
+                    class="btn btn-secondary btn-xs icon-btn"
+                    title="아래로 이동"
+                    :disabled="idx === listInfo.items.length - 1 || listInfo.truncated"
+                    @click="moveListItem(idx, idx + 1)"
+                  >
+                    ▼
+                  </button>
+                </template>
+              </td>
             </tr>
           </tbody>
         </table>
@@ -113,7 +317,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch, computed } from 'vue';
+import { ref, watch, computed, nextTick } from 'vue';
 import TypeBadge from './TypeBadge.vue';
 
 interface KeyDetail {
@@ -124,11 +328,42 @@ interface KeyDetail {
 }
 
 const props = defineProps<{ keyName: string | null }>();
-const emit = defineEmits<{ (e: 'deleted', key: string): void }>();
+const emit = defineEmits<{
+  (e: 'deleted', key: string): void;
+  (e: 'renamed', oldKey: string, newKey: string): void;
+}>();
 
 const detail = ref<KeyDetail | null>(null);
 const loading = ref(false);
 const error = ref('');
+const saving = ref(false);
+const saveError = ref('');
+
+// Key name editing
+const editingKeyName = ref(false);
+const pendingKeyName = ref('');
+const keyNameInput = ref<HTMLInputElement | null>(null);
+
+// TTL editing
+const editingTtl = ref(false);
+const pendingTtl = ref('');
+const ttlInput = ref<HTMLInputElement | null>(null);
+
+// String editing
+const editingString = ref(false);
+const pendingString = ref('');
+const jsonExpanded = ref(false);
+
+// Hash editing
+const editingHashField = ref<string | null>(null);
+const pendingHashValue = ref('');
+const addingHashField = ref(false);
+const newHashFieldName = ref('');
+const newHashFieldValue = ref('');
+
+// List editing
+const editingListIndex = ref<number | null>(null);
+const pendingListValue = ref('');
 
 function encodeKey(key: string) {
   return btoa(key).replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
@@ -138,6 +373,15 @@ async function fetchDetail(key: string) {
   loading.value = true;
   error.value = '';
   detail.value = null;
+  saveError.value = '';
+
+  // Reset editing states
+  editingKeyName.value = false;
+  editingTtl.value = false;
+  editingString.value = false;
+  editingHashField.value = null;
+  addingHashField.value = false;
+  editingListIndex.value = null;
 
   try {
     const res = await fetch(`/api/key/${encodeKey(key)}`);
@@ -167,6 +411,341 @@ async function deleteKey() {
     error.value = e instanceof Error ? e.message : 'Delete failed';
   }
 }
+
+// ─── Key rename ───────────────────────────────────────────────────────────────
+
+function startEditKeyName() {
+  if (!detail.value) return;
+  pendingKeyName.value = detail.value.key;
+  editingKeyName.value = true;
+  nextTick(() => keyNameInput.value?.select());
+}
+
+function cancelEditKeyName() {
+  editingKeyName.value = false;
+  saveError.value = '';
+}
+
+async function saveKeyName() {
+  if (!detail.value || !pendingKeyName.value.trim()) return;
+  const newKey = pendingKeyName.value.trim();
+  if (newKey === detail.value.key) {
+    cancelEditKeyName();
+    return;
+  }
+
+  saving.value = true;
+  saveError.value = '';
+  try {
+    const res = await fetch(`/api/key/${encodeKey(detail.value.key)}/rename`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ newKey }),
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      saveError.value = data.error || 'Rename failed';
+    } else {
+      const oldKey = detail.value.key;
+      editingKeyName.value = false;
+      emit('renamed', oldKey, newKey);
+    }
+  } catch (e: unknown) {
+    saveError.value = e instanceof Error ? e.message : 'Rename failed';
+  } finally {
+    saving.value = false;
+  }
+}
+
+// ─── TTL editing ──────────────────────────────────────────────────────────────
+
+function startEditTtl() {
+  if (!detail.value) return;
+  const ttlSec = detail.value.ttl > 0 ? Math.ceil(detail.value.ttl / 1000) : '';
+  pendingTtl.value = String(ttlSec);
+  editingTtl.value = true;
+  nextTick(() => ttlInput.value?.focus());
+}
+
+function cancelEditTtl() {
+  editingTtl.value = false;
+  saveError.value = '';
+}
+
+async function saveTtl() {
+  if (!detail.value) return;
+  const seconds = Number(pendingTtl.value);
+  if (!pendingTtl.value || isNaN(seconds) || seconds <= 0) {
+    saveError.value = 'TTL은 1 이상의 숫자(초)를 입력하세요';
+    return;
+  }
+
+  saving.value = true;
+  saveError.value = '';
+  try {
+    const res = await fetch(`/api/key/${encodeKey(detail.value.key)}/ttl`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ttl: seconds }),
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      saveError.value = data.error || 'TTL 업데이트 실패';
+    } else {
+      editingTtl.value = false;
+      await fetchDetail(detail.value.key);
+    }
+  } catch (e: unknown) {
+    saveError.value = e instanceof Error ? e.message : 'TTL 업데이트 실패';
+  } finally {
+    saving.value = false;
+  }
+}
+
+async function persistTtl() {
+  if (!detail.value) return;
+  saving.value = true;
+  saveError.value = '';
+  try {
+    const res = await fetch(`/api/key/${encodeKey(detail.value.key)}/ttl`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ttl: -1 }),
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      saveError.value = data.error || 'Persist 실패';
+    } else {
+      editingTtl.value = false;
+      await fetchDetail(detail.value.key);
+    }
+  } catch (e: unknown) {
+    saveError.value = e instanceof Error ? e.message : 'Persist 실패';
+  } finally {
+    saving.value = false;
+  }
+}
+
+// ─── String editing ───────────────────────────────────────────────────────────
+
+function startEditString() {
+  if (!detail.value) return;
+  pendingString.value = String(detail.value.value ?? '');
+  editingString.value = true;
+}
+
+function cancelEditString() {
+  editingString.value = false;
+  saveError.value = '';
+}
+
+function formatJsonInEditor() {
+  try {
+    pendingString.value = JSON.stringify(JSON.parse(pendingString.value), null, 2);
+  } catch {
+    /* not valid JSON */
+  }
+}
+
+async function saveStringValue() {
+  if (!detail.value) return;
+  saving.value = true;
+  saveError.value = '';
+  try {
+    const res = await fetch(`/api/key/${encodeKey(detail.value.key)}/value`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ value: pendingString.value }),
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      saveError.value = data.error || '저장 실패';
+    } else {
+      editingString.value = false;
+      await fetchDetail(detail.value.key);
+    }
+  } catch (e: unknown) {
+    saveError.value = e instanceof Error ? e.message : '저장 실패';
+  } finally {
+    saving.value = false;
+  }
+}
+
+// ─── Hash editing ─────────────────────────────────────────────────────────────
+
+function startEditHashField(field: string, currentValue: string) {
+  editingHashField.value = field;
+  pendingHashValue.value = currentValue;
+  saveError.value = '';
+}
+
+function cancelEditHashField() {
+  editingHashField.value = null;
+  saveError.value = '';
+}
+
+async function saveHashField(field: string) {
+  if (!detail.value) return;
+  saving.value = true;
+  saveError.value = '';
+  try {
+    const res = await fetch(`/api/key/${encodeKey(detail.value.key)}/hash`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ field, value: pendingHashValue.value }),
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      saveError.value = data.error || '저장 실패';
+    } else {
+      editingHashField.value = null;
+      // Update local state
+      (detail.value.value as Record<string, string>)[field] = pendingHashValue.value;
+    }
+  } catch (e: unknown) {
+    saveError.value = e instanceof Error ? e.message : '저장 실패';
+  } finally {
+    saving.value = false;
+  }
+}
+
+async function deleteHashField(field: string) {
+  if (!detail.value) return;
+  if (!confirm(`필드 "${field}"를 삭제하시겠습니까?`)) return;
+
+  saving.value = true;
+  saveError.value = '';
+  try {
+    const fieldId = btoa(field).replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
+    const res = await fetch(`/api/key/${encodeKey(detail.value.key)}/hash/${fieldId}`, {
+      method: 'DELETE',
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      saveError.value = data.error || '삭제 실패';
+    } else {
+      // Update local state
+      delete (detail.value.value as Record<string, string>)[field];
+    }
+  } catch (e: unknown) {
+    saveError.value = e instanceof Error ? e.message : '삭제 실패';
+  } finally {
+    saving.value = false;
+  }
+}
+
+function startAddHashField() {
+  addingHashField.value = true;
+  newHashFieldName.value = '';
+  newHashFieldValue.value = '';
+  cancelEditHashField();
+}
+
+function cancelAddHashField() {
+  addingHashField.value = false;
+}
+
+async function submitAddHashField() {
+  if (!detail.value) return;
+  const field = newHashFieldName.value.trim();
+  if (!field) {
+    saveError.value = '필드 이름을 입력하세요';
+    return;
+  }
+
+  saving.value = true;
+  saveError.value = '';
+  try {
+    const res = await fetch(`/api/key/${encodeKey(detail.value.key)}/hash`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ field, value: newHashFieldValue.value }),
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      saveError.value = data.error || '추가 실패';
+    } else {
+      (detail.value.value as Record<string, string>)[field] = newHashFieldValue.value;
+      addingHashField.value = false;
+    }
+  } catch (e: unknown) {
+    saveError.value = e instanceof Error ? e.message : '추가 실패';
+  } finally {
+    saving.value = false;
+  }
+}
+
+// ─── List editing ─────────────────────────────────────────────────────────────
+
+function startEditListItem(index: number, currentValue: string) {
+  editingListIndex.value = index;
+  pendingListValue.value = currentValue;
+  saveError.value = '';
+}
+
+function cancelEditListItem() {
+  editingListIndex.value = null;
+  saveError.value = '';
+}
+
+async function saveListItem(index: number) {
+  if (!detail.value) return;
+  saving.value = true;
+  saveError.value = '';
+  try {
+    const res = await fetch(`/api/key/${encodeKey(detail.value.key)}/list/${index}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ value: pendingListValue.value }),
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      saveError.value = data.error || '저장 실패';
+    } else {
+      editingListIndex.value = null;
+      // Update local state
+      const v = detail.value.value;
+      if (Array.isArray(v)) {
+        v[index] = pendingListValue.value;
+      } else if (v && typeof v === 'object' && 'items' in v) {
+        (v as { items: string[] }).items[index] = pendingListValue.value;
+      }
+    }
+  } catch (e: unknown) {
+    saveError.value = e instanceof Error ? e.message : '저장 실패';
+  } finally {
+    saving.value = false;
+  }
+}
+
+async function moveListItem(from: number, to: number) {
+  if (!detail.value) return;
+  saving.value = true;
+  saveError.value = '';
+  try {
+    const res = await fetch(`/api/key/${encodeKey(detail.value.key)}/list/move`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ from, to }),
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      saveError.value = data.error || '이동 실패';
+    } else {
+      // Update local state
+      const v = detail.value.value;
+      const items: string[] = Array.isArray(v) ? v : (v as { items: string[] }).items;
+      const [item] = items.splice(from, 1);
+      items.splice(to, 0, item);
+    }
+  } catch (e: unknown) {
+    saveError.value = e instanceof Error ? e.message : '이동 실패';
+  } finally {
+    saving.value = false;
+  }
+}
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function formatTtl(ttl: number) {
   if (ttl === -1) return 'No expiry';
@@ -257,6 +836,7 @@ watch(
   color: var(--danger);
 }
 
+/* Header */
 .detail-header {
   padding: 14px 16px;
   border-bottom: 1px solid var(--border);
@@ -265,17 +845,62 @@ watch(
   gap: 8px;
 }
 
+.detail-key-name-row {
+  display: flex;
+  align-items: center;
+  min-height: 28px;
+}
+
+.key-name-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 100%;
+  min-width: 0;
+}
+
 .detail-key-name {
   font-size: 15px;
   font-weight: 600;
-  word-break: break-all;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
   color: var(--text-primary);
+  cursor: text;
+}
+
+.detail-key-name:hover {
+  color: var(--accent);
+}
+
+.key-input {
+  flex: 1;
+  font-size: 14px;
+  padding: 4px 8px;
+}
+
+.btn-icon {
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  padding: 2px 4px;
+  font-size: 13px;
+  border-radius: var(--radius-sm);
+  flex-shrink: 0;
+  line-height: 1;
+}
+
+.btn-icon:hover {
+  color: var(--accent);
+  background: var(--bg-hover);
 }
 
 .detail-meta {
   display: flex;
   align-items: center;
   gap: 8px;
+  flex-wrap: wrap;
 }
 
 .ttl-badge {
@@ -292,12 +917,49 @@ watch(
   border-color: var(--danger);
 }
 
+.ttl-badge.ttl-editable {
+  cursor: pointer;
+}
+
+.ttl-badge.ttl-editable:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.ttl-editor {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.ttl-input {
+  width: 120px;
+  padding: 2px 8px;
+  font-size: 12px;
+}
+
 .btn-sm {
   padding: 3px 10px;
   font-size: 12px;
+}
+
+.btn-xs {
+  padding: 2px 8px;
+  font-size: 11px;
+}
+
+.btn-sm.btn-danger,
+.btn-xs.btn-danger {
   margin-left: auto;
 }
 
+.save-error {
+  font-size: 12px;
+  color: var(--danger);
+}
+
+/* Value section */
 .value-section {
   flex: 1;
   overflow-y: auto;
@@ -305,6 +967,19 @@ watch(
   display: flex;
   flex-direction: column;
   gap: 10px;
+}
+
+.section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.section-actions {
+  display: flex;
+  gap: 6px;
+  align-items: center;
 }
 
 .section-label {
@@ -340,6 +1015,27 @@ watch(
   color: var(--type-string);
 }
 
+.value-textarea {
+  width: 100%;
+  padding: 10px 12px;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  resize: vertical;
+  min-height: 120px;
+  line-height: 1.5;
+}
+
+/* Inline input */
+.inline-input {
+  padding: 3px 8px;
+  font-size: 13px;
+  border-radius: var(--radius-sm);
+}
+
+.inline-input.w-full {
+  width: 100%;
+}
+
 /* Tables */
 .kv-table {
   width: 100%;
@@ -359,18 +1055,31 @@ watch(
 }
 
 .kv-table td {
-  padding: 6px 8px;
+  padding: 5px 8px;
   border-bottom: 1px solid var(--border-muted);
-  vertical-align: top;
+  vertical-align: middle;
 }
 
 .kv-table tr:hover td {
   background: var(--bg-hover);
 }
 
+.new-row td {
+  background: var(--bg-active);
+}
+
+.th-idx {
+  width: 50px;
+}
+
+.th-actions {
+  width: 160px;
+  text-align: right;
+}
+
 .cell-field {
   color: var(--type-hash);
-  width: 30%;
+  width: 28%;
   word-break: break-all;
 }
 
@@ -381,9 +1090,23 @@ watch(
 .cell-index,
 .cell-score {
   color: var(--text-muted);
-  width: 60px;
+  width: 50px;
   text-align: right;
   font-family: var(--font-mono);
+}
+
+.cell-actions {
+  text-align: right;
+  white-space: nowrap;
+  display: flex;
+  justify-content: flex-end;
+  gap: 4px;
+  padding: 4px 8px;
+}
+
+.icon-btn {
+  padding: 2px 6px;
+  font-size: 10px;
 }
 
 /* Set tag cloud */

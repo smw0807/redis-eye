@@ -168,4 +168,158 @@ router.delete('/key/:id', async (req, res) => {
   }
 });
 
+// PATCH /api/key/:id/rename — rename a key
+router.patch('/key/:id/rename', async (req, res) => {
+  if (!isConnected()) return res.status(400).json({ error: 'Not connected' });
+
+  const key = Buffer.from(req.params.id, 'base64url').toString('utf8');
+  const { newKey } = req.body;
+
+  if (!newKey || typeof newKey !== 'string') {
+    return res.status(400).json({ error: 'newKey is required' });
+  }
+
+  const client = getClient();
+  try {
+    await client.rename(key, newKey);
+    res.json({ ok: true, newKey });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// PUT /api/key/:id/value — update string value (preserves TTL)
+router.put('/key/:id/value', async (req, res) => {
+  if (!isConnected()) return res.status(400).json({ error: 'Not connected' });
+
+  const key = Buffer.from(req.params.id, 'base64url').toString('utf8');
+  const { value } = req.body;
+
+  if (value === undefined) return res.status(400).json({ error: 'value is required' });
+
+  const client = getClient();
+  try {
+    const pttl = await client.pttl(key);
+    await client.set(key, String(value));
+    if (pttl > 0) await client.pexpire(key, pttl);
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// PUT /api/key/:id/ttl — update TTL (ttl=-1 to persist, ttl>0 for seconds)
+router.put('/key/:id/ttl', async (req, res) => {
+  if (!isConnected()) return res.status(400).json({ error: 'Not connected' });
+
+  const key = Buffer.from(req.params.id, 'base64url').toString('utf8');
+  const { ttl } = req.body;
+
+  const client = getClient();
+  try {
+    if (Number(ttl) === -1) {
+      await client.persist(key);
+    } else {
+      const seconds = Number(ttl);
+      if (isNaN(seconds) || seconds <= 0) {
+        return res.status(400).json({ error: 'ttl must be a positive number or -1 to persist' });
+      }
+      await client.expire(key, seconds);
+    }
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// PUT /api/key/:id/hash — set/update a hash field
+router.put('/key/:id/hash', async (req, res) => {
+  if (!isConnected()) return res.status(400).json({ error: 'Not connected' });
+
+  const key = Buffer.from(req.params.id, 'base64url').toString('utf8');
+  const { field, value } = req.body;
+
+  if (!field || value === undefined) {
+    return res.status(400).json({ error: 'field and value are required' });
+  }
+
+  const client = getClient();
+  try {
+    await client.hset(key, field, String(value));
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// DELETE /api/key/:id/hash/:fieldId — delete a hash field (:fieldId is base64url encoded)
+router.delete('/key/:id/hash/:fieldId', async (req, res) => {
+  if (!isConnected()) return res.status(400).json({ error: 'Not connected' });
+
+  const key = Buffer.from(req.params.id, 'base64url').toString('utf8');
+  const field = Buffer.from(req.params.fieldId, 'base64url').toString('utf8');
+
+  const client = getClient();
+  try {
+    await client.hdel(key, field);
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// PUT /api/key/:id/list/:index — update a list item at index
+router.put('/key/:id/list/:index', async (req, res) => {
+  if (!isConnected()) return res.status(400).json({ error: 'Not connected' });
+
+  const key = Buffer.from(req.params.id, 'base64url').toString('utf8');
+  const index = parseInt(req.params.index, 10);
+  const { value } = req.body;
+
+  if (isNaN(index) || value === undefined) {
+    return res.status(400).json({ error: 'index and value are required' });
+  }
+
+  const client = getClient();
+  try {
+    await client.lset(key, index, String(value));
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// POST /api/key/:id/list/move — reorder a list item (from index → to index)
+router.post('/key/:id/list/move', async (req, res) => {
+  if (!isConnected()) return res.status(400).json({ error: 'Not connected' });
+
+  const key = Buffer.from(req.params.id, 'base64url').toString('utf8');
+  const { from, to } = req.body;
+
+  if (from === undefined || to === undefined) {
+    return res.status(400).json({ error: 'from and to are required' });
+  }
+  if (Number(from) === Number(to)) return res.json({ ok: true });
+
+  const client = getClient();
+  try {
+    const total = await client.llen(key);
+    if (total > 500) {
+      return res
+        .status(400)
+        .json({ error: '500개 초과 리스트는 순서 변경이 지원되지 않습니다' });
+    }
+    const items = await client.lrange(key, 0, -1);
+    const [item] = items.splice(Number(from), 1);
+    items.splice(Number(to), 0, item);
+    const pipeline = client.multi();
+    pipeline.del(key);
+    if (items.length > 0) pipeline.rpush(key, ...items);
+    await pipeline.exec();
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 module.exports = router;
