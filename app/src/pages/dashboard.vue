@@ -17,22 +17,32 @@
             v-if="dbs.length > 0"
             class="db-select input-field"
             :value="currentDb"
-            @change="switchDb($event)"
-          >
+            @change="switchDb($event)">
             <option v-for="d in dbs" :key="d.db" :value="d.db">
               db{{ d.db }} ({{ d.keys }})
             </option>
           </select>
-          <button class="btn btn-primary add-key-btn" @click="showAddModal = true">+ New</button>
-          <button class="btn btn-secondary disconnect-btn" @click="disconnect">Disconnect</button>
+          <button
+            class="btn btn-primary add-key-btn"
+            @click="showAddModal = true">
+            + New
+          </button>
+          <button
+            class="btn btn-secondary icon-btn"
+            title="Refresh key list"
+            @click="keyListRef?.refresh()">
+            ↻
+          </button>
+          <button class="btn btn-secondary disconnect-btn" @click="disconnect">
+            Disconnect
+          </button>
         </div>
       </div>
 
       <KeyList
         ref="keyListRef"
         :selected-key="selectedKey"
-        @select="selectKey"
-      />
+        @select="selectKey" />
     </aside>
 
     <!-- Main content -->
@@ -55,100 +65,105 @@
   <AddKeyModal
     v-if="showAddModal"
     @close="showAddModal = false"
-    @created="onKeyCreated"
-  />
+    @created="onKeyCreated" />
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
-import KeyList from '../components/KeyList.vue'
-import KeyDetail from '../components/KeyDetail.vue'
-import AddKeyModal from '../components/AddKeyModal.vue'
+import {ref, onMounted} from 'vue';
+import {useRouter} from 'vue-router';
+import KeyList from '../components/KeyList.vue';
+import KeyDetail from '../components/KeyDetail.vue';
+import AddKeyModal from '../components/AddKeyModal.vue';
 
 interface DbInfo {
-  db: number
-  keys: number
+  db: number;
+  keys: number;
 }
 
 interface RedisInfo {
-  version: string
-  usedMemoryHuman: string
-  connectedClients: number
-  role: string
+  version: string;
+  usedMemoryHuman: string;
+  connectedClients: number;
+  role: string;
 }
 
-const router = useRouter()
-const selectedKey = ref<string | null>(null)
-const dbs = ref<DbInfo[]>([])
-const currentDb = ref(0)
-const info = ref<RedisInfo | null>(null)
-const connAddr = ref('')
-const keyListRef = ref<InstanceType<typeof KeyList> | null>(null)
-const showAddModal = ref(false)
+const router = useRouter();
+const selectedKey = ref<string | null>(null);
+const dbs = ref<DbInfo[]>([]);
+const currentDb = ref(0);
+const info = ref<RedisInfo | null>(null);
+const connAddr = ref('');
+const keyListRef = ref<InstanceType<typeof KeyList> | null>(null);
+const showAddModal = ref(false);
 
 async function fetchInfo() {
   try {
-    const res = await fetch('/api/info')
-    if (res.ok) info.value = await res.json()
-  } catch { /* ignore */ }
+    const res = await fetch('/api/info');
+    if (res.ok) info.value = await res.json();
+  } catch {
+    /* ignore */
+  }
 }
 
 async function fetchDbs() {
   try {
-    const res = await fetch('/api/db')
+    const res = await fetch('/api/db');
     if (res.ok) {
-      const data = await res.json()
-      dbs.value = data.dbs
-      currentDb.value = data.current
+      const data = await res.json();
+      dbs.value = data.dbs;
+      currentDb.value = data.current;
     }
-  } catch { /* ignore */ }
+  } catch {
+    /* ignore */
+  }
 }
 
 async function switchDb(event: Event) {
-  const db = Number((event.target as HTMLSelectElement).value)
+  const db = Number((event.target as HTMLSelectElement).value);
   try {
     await fetch('/api/db/switch', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ db }),
-    })
-    currentDb.value = db
-    selectedKey.value = null
-    keyListRef.value?.refresh()
-    fetchDbs()
-  } catch { /* ignore */ }
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({db}),
+    });
+    currentDb.value = db;
+    selectedKey.value = null;
+    keyListRef.value?.refresh();
+    fetchDbs();
+  } catch {
+    /* ignore */
+  }
 }
 
 async function disconnect() {
-  await fetch('/api/disconnect', { method: 'DELETE' })
-  router.push('/')
+  await fetch('/api/disconnect', {method: 'DELETE'});
+  router.push('/');
 }
 
 function selectKey(key: string) {
-  selectedKey.value = key
+  selectedKey.value = key;
 }
 
 function onKeyDeleted(_key: string) {
-  selectedKey.value = null
-  keyListRef.value?.refresh()
+  selectedKey.value = null;
+  keyListRef.value?.refresh();
 }
 
 function onKeyCreated(key: string) {
-  showAddModal.value = false
-  keyListRef.value?.refresh()
-  selectedKey.value = key
-  fetchDbs()
+  showAddModal.value = false;
+  keyListRef.value?.refresh();
+  selectedKey.value = key;
+  fetchDbs();
 }
 
 onMounted(async () => {
-  await Promise.all([fetchInfo(), fetchDbs()])
+  await Promise.all([fetchInfo(), fetchDbs()]);
 
   // Try to get connection address from info
   if (info.value) {
-    connAddr.value = 'connected'
+    connAddr.value = 'connected';
   }
-})
+});
 </script>
 
 <style scoped>
@@ -234,6 +249,11 @@ onMounted(async () => {
 .add-key-btn {
   font-size: 12px;
   padding: 4px 10px;
+}
+
+.icon-btn {
+  font-size: 14px;
+  padding: 4px 8px;
 }
 
 .disconnect-btn {
