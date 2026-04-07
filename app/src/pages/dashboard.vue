@@ -23,6 +23,7 @@
               db{{ d.db }} ({{ d.keys }})
             </option>
           </select>
+          <button class="btn btn-primary add-key-btn" @click="showAddModal = true">+ New</button>
           <button class="btn btn-secondary disconnect-btn" @click="disconnect">Disconnect</button>
         </div>
       </div>
@@ -50,6 +51,12 @@
       <KeyDetail :key-name="selectedKey" @deleted="onKeyDeleted" />
     </main>
   </div>
+
+  <AddKeyModal
+    v-if="showAddModal"
+    @close="showAddModal = false"
+    @created="onKeyCreated"
+  />
 </template>
 
 <script setup lang="ts">
@@ -57,6 +64,7 @@ import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import KeyList from '../components/KeyList.vue'
 import KeyDetail from '../components/KeyDetail.vue'
+import AddKeyModal from '../components/AddKeyModal.vue'
 
 interface DbInfo {
   db: number
@@ -77,6 +85,7 @@ const currentDb = ref(0)
 const info = ref<RedisInfo | null>(null)
 const connAddr = ref('')
 const keyListRef = ref<InstanceType<typeof KeyList> | null>(null)
+const showAddModal = ref(false)
 
 async function fetchInfo() {
   try {
@@ -123,6 +132,13 @@ function selectKey(key: string) {
 function onKeyDeleted(_key: string) {
   selectedKey.value = null
   keyListRef.value?.refresh()
+}
+
+function onKeyCreated(key: string) {
+  showAddModal.value = false
+  keyListRef.value?.refresh()
+  selectedKey.value = key
+  fetchDbs()
 }
 
 onMounted(async () => {
@@ -213,6 +229,11 @@ onMounted(async () => {
   flex: 1;
   padding: 4px 8px;
   font-size: 12px;
+}
+
+.add-key-btn {
+  font-size: 12px;
+  padding: 4px 10px;
 }
 
 .disconnect-btn {

@@ -76,6 +76,84 @@ router.get('/key/:id', async (req, res) => {
   }
 })
 
+// POST /api/key — create a new key
+router.post('/key', async (req, res) => {
+  if (!isConnected()) {
+    return res.status(400).json({ error: 'Not connected' })
+  }
+
+  const { key, type, value, ttl } = req.body
+
+  if (!key || !type || value === undefined) {
+    return res.status(400).json({ error: 'key, type, value are required' })
+  }
+
+  const client = getClient()
+
+  try {
+    const exists = await client.exists(key)
+    if (exists) {
+      return res.status(409).json({ error: 'Key already exists' })
+    }
+
+    switch (type) {
+      case 'string':
+        await client.set(key, String(value))
+        break
+
+      case 'hash': {
+        if (typeof value !== 'object' || Array.isArray(value) || Object.keys(value).length === 0) {
+          return res.status(400).json({ error: 'Hash value must be a non-empty object' })
+        }
+        await client.hset(key, ...Object.entries(value).flat())
+        break
+      }
+
+      case 'list': {
+        if (!Array.isArray(value) || value.length === 0) {
+          return res.status(400).json({ error: 'List value must be a non-empty array' })
+        }
+        await client.rpush(key, ...value.map(String))
+        break
+      }
+
+      case 'set': {
+        if (!Array.isArray(value) || value.length === 0) {
+          return res.status(400).json({ error: 'Set value must be a non-empty array' })
+        }
+        await client.sadd(key, ...value.map(String))
+        break
+      }
+
+      case 'zset': {
+        if (!Array.isArray(value) || value.length === 0) {
+          return res.status(400).json({ error: 'ZSet value must be a non-empty array' })
+        }
+        const args = []
+        for (const item of value) {
+          if (item.member === undefined || item.score === undefined) {
+            return res.status(400).json({ error: 'ZSet items must have member and score' })
+          }
+          args.push(Number(item.score), String(item.member))
+        }
+        await client.zadd(key, ...args)
+        break
+      }
+
+      default:
+        return res.status(400).json({ error: `Unknown type: ${type}` })
+    }
+
+    if (ttl && Number(ttl) > 0) {
+      await client.expire(key, Number(ttl))
+    }
+
+    res.json({ ok: true, key, type })
+  } catch (err) {
+    res.status(500).json({ error: err.message })
+  }
+})
+
 // DELETE /api/key/:id
 router.delete('/key/:id', async (req, res) => {
   if (!isConnected()) {
