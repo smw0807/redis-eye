@@ -187,6 +187,21 @@ const now = ref(Date.now());
 const searchHistory = ref<string[]>(JSON.parse(localStorage.getItem(HISTORY_KEY) ?? '[]'));
 const showHistory = ref(false);
 
+const filteredItems = computed(() => {
+  let result = items.value;
+  if (activeType.value) {
+    result = result.filter((i) => i.type === activeType.value);
+  }
+  if (expiringFilter.value) {
+    result = result.filter((i) => {
+      if (i.expireAt === -1) return false;
+      const remaining = i.expireAt - now.value;
+      return remaining > 0 && remaining <= EXPIRING_THRESHOLD_MS;
+    });
+  }
+  return result;
+});
+
 // ─── Selection ───────────────────────────────────────────────────────────────
 
 const selectionMode = ref(false);
@@ -298,21 +313,6 @@ async function handleBulkDelete() {
 }
 
 // ─── Key list loading ─────────────────────────────────────────────────────────
-
-const filteredItems = computed(() => {
-  let result = items.value;
-  if (activeType.value) {
-    result = result.filter((i) => i.type === activeType.value);
-  }
-  if (expiringFilter.value) {
-    result = result.filter((i) => {
-      if (i.expireAt === -1) return false;
-      const remaining = i.expireAt - now.value;
-      return remaining > 0 && remaining <= EXPIRING_THRESHOLD_MS;
-    });
-  }
-  return result;
-});
 
 const listEl = ref<HTMLElement | null>(null);
 const sentinelEl = ref<HTMLElement | null>(null);
