@@ -35,4 +35,11 @@ function start(port = 3000) {
   })
 }
 
+// 직접 실행 시 자동 시작 (nodemon server/index.js)
+if (require.main === module) {
+  start(3000).then(({ port }) => {
+    console.log(`  server running at http://127.0.0.1:${port}`)
+  })
+}
+
 module.exports = { app, start }
