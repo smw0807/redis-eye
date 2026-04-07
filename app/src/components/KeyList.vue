@@ -47,47 +47,112 @@
       </button>
     </div>
 
-    <!-- Key count -->
+    <!-- Key count / Selection bar -->
     <div class="key-count">
-      <span v-if="filteredItems.length > 0">
-        {{ filteredItems.length }}{{ activeType ? ` ${activeType}` : ''
-        }}{{ expiringFilter ? ' expiring' : '' }} keys
-        <template v-if="!done"> loaded</template>
-      </span>
-      <span v-else-if="loading">Loading…</span>
-      <span v-else>No keys found</span>
-      <button v-if="!done && !loading" class="btn btn-secondary load-more-btn" @click="loadMore">
-        Load more
-      </button>
+      <template v-if="!selectionMode">
+        <span v-if="filteredItems.length > 0">
+          {{ filteredItems.length }}{{ activeType ? ` ${activeType}` : ''
+          }}{{ expiringFilter ? ' expiring' : '' }} keys
+          <template v-if="!done"> loaded</template>
+        </span>
+        <span v-else-if="loading">Loading…</span>
+        <span v-else>No keys found</span>
+        <div class="key-count-actions">
+          <button
+            v-if="!done && !loading"
+            class="btn btn-secondary load-more-btn"
+            @click="loadMore"
+          >
+            Load more
+          </button>
+          <button
+            v-if="filteredItems.length > 0"
+            class="btn btn-secondary select-btn"
+            @click="enterSelectionMode"
+          >
+            Select
+          </button>
+        </div>
+      </template>
+
+      <template v-else>
+        <label class="select-all-label">
+          <input
+            ref="selectAllRef"
+            type="checkbox"
+            :checked="allSelected"
+            @change="toggleSelectAll"
+          />
+          <span class="select-all-text">
+            {{ selectedCount > 0 ? `${selectedCount} selected` : 'Select all' }}
+          </span>
+        </label>
+        <div class="key-count-actions">
+          <button
+            v-if="selectedCount > 0"
+            class="btn btn-danger select-delete-btn"
+            @click="handleBulkDelete"
+          >
+            Delete ({{ selectedCount }})
+          </button>
+          <button class="btn btn-secondary select-btn" @click="exitSelectionMode">Cancel</button>
+        </div>
+      </template>
     </div>
 
     <!-- Key items -->
     <div ref="listEl" class="key-items">
-      <button
+      <div
         v-for="item in filteredItems"
         :key="item.key"
         class="key-item"
-        :class="{ active: selectedKey === item.key }"
-        @click="$emit('select', item.key)"
+        :class="{
+          active: !selectionMode && selectedKey === item.key,
+          'is-selected': selectionMode && selectedKeys.has(item.key),
+        }"
+        role="button"
+        tabindex="0"
+        @click="onItemClick(item.key)"
+        @keydown.enter="onItemClick(item.key)"
+        @keydown.space.prevent="onItemClick(item.key)"
       >
+        <input
+          v-if="selectionMode"
+          type="checkbox"
+          class="item-checkbox"
+          :checked="selectedKeys.has(item.key)"
+          @click.stop
+          @change="toggleSelection(item.key)"
+        />
         <TypeBadge :type="item.type" />
         <span class="key-name mono">{{ item.key }}</span>
         <span v-if="item.expireAt !== -1" class="ttl-badge" :class="getTtlClass(item)">{{
           formatRemainingTtl(item)
         }}</span>
-      </button>
+      </div>
 
       <!-- Sentinel for infinite scroll -->
       <div ref="sentinelEl" class="sentinel" />
     </div>
 
     <div v-if="loading" class="loading-row"><span class="spinner" /> Loading…</div>
+
+    <ConfirmDialog
+      v-if="confirmState"
+      :title="confirmState.title"
+      :message="confirmState.message"
+      :confirm-text="confirmState.confirmText"
+      type="danger"
+      @confirm="onConfirmOk"
+      @cancel="onConfirmCancel"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted } from 'vue';
+import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue';
 import TypeBadge from './TypeBadge.vue';
+import ConfirmDialog from './ConfirmDialog.vue';
 
 interface KeyItem {
   key: string;
@@ -103,7 +168,10 @@ const MAX_HISTORY = 8;
 const EXPIRING_THRESHOLD_MS = 5 * 60 * 1000; // 5 minutes
 
 defineProps<{ selectedKey: string | null }>();
-defineEmits<{ (e: 'select', key: string): void }>();
+const emit = defineEmits<{
+  (e: 'select', key: string): void;
+  (e: 'bulkDeleted', keys: string[]): void;
+}>();
 
 const items = ref<KeyItem[]>([]);
 const cursor = ref('0');
@@ -118,6 +186,118 @@ const now = ref(Date.now());
 
 const searchHistory = ref<string[]>(JSON.parse(localStorage.getItem(HISTORY_KEY) ?? '[]'));
 const showHistory = ref(false);
+
+// ─── Selection ───────────────────────────────────────────────────────────────
+
+const selectionMode = ref(false);
+const selectedKeys = ref(new Set<string>());
+const selectAllRef = ref<HTMLInputElement | null>(null);
+
+const selectedCount = computed(() => selectedKeys.value.size);
+const allSelected = computed(
+  () => filteredItems.value.length > 0 && filteredItems.value.every((i) => selectedKeys.value.has(i.key))
+);
+const someSelected = computed(() => selectedCount.value > 0 && !allSelected.value);
+
+watch([selectedCount, allSelected], () => {
+  nextTick(() => {
+    if (selectAllRef.value) {
+      selectAllRef.value.indeterminate = someSelected.value;
+    }
+  });
+});
+
+function enterSelectionMode() {
+  selectionMode.value = true;
+  selectedKeys.value = new Set();
+}
+
+function exitSelectionMode() {
+  selectionMode.value = false;
+  selectedKeys.value = new Set();
+}
+
+function toggleSelection(key: string) {
+  const s = new Set(selectedKeys.value);
+  s.has(key) ? s.delete(key) : s.add(key);
+  selectedKeys.value = s;
+}
+
+function toggleSelectAll() {
+  if (allSelected.value) {
+    selectedKeys.value = new Set();
+  } else {
+    selectedKeys.value = new Set(filteredItems.value.map((i) => i.key));
+  }
+}
+
+function onItemClick(key: string) {
+  if (selectionMode.value) {
+    toggleSelection(key);
+  } else {
+    emit('select', key);
+  }
+}
+
+// ─── Confirm dialog ───────────────────────────────────────────────────────────
+
+interface ConfirmOptions {
+  title?: string;
+  message: string;
+  confirmText?: string;
+}
+const confirmState = ref<ConfirmOptions | null>(null);
+let confirmResolve: ((v: boolean) => void) | null = null;
+
+function openConfirm(options: ConfirmOptions): Promise<boolean> {
+  return new Promise((resolve) => {
+    confirmResolve = resolve;
+    confirmState.value = options;
+  });
+}
+
+function onConfirmOk() {
+  confirmState.value = null;
+  confirmResolve?.(true);
+  confirmResolve = null;
+}
+
+function onConfirmCancel() {
+  confirmState.value = null;
+  confirmResolve?.(false);
+  confirmResolve = null;
+}
+
+// ─── Bulk delete ──────────────────────────────────────────────────────────────
+
+async function handleBulkDelete() {
+  if (selectedCount.value === 0) return;
+
+  const keys = [...selectedKeys.value];
+  const ok = await openConfirm({
+    title: 'Delete Keys',
+    message: `Are you sure you want to delete ${keys.length} key${keys.length > 1 ? 's' : ''}?`,
+    confirmText: 'Delete',
+  });
+  if (!ok) return;
+
+  try {
+    const res = await fetch('/api/keys', {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ keys }),
+    });
+    if (res.ok) {
+      emit('bulkDeleted', keys);
+      exitSelectionMode();
+      applySearch();
+    }
+  } catch (e) {
+    console.error('Bulk delete failed:', e);
+  }
+}
+
+// ─── Key list loading ─────────────────────────────────────────────────────────
 
 const filteredItems = computed(() => {
   let result = items.value;
@@ -229,6 +409,7 @@ function applySearch() {
   cursor.value = '0';
   done.value = false;
   showHistory.value = false;
+  exitSelectionMode();
   loadMore();
 }
 
@@ -401,6 +582,7 @@ defineExpose({ refresh: applySearch });
   color: var(--text-primary);
 }
 
+/* Key count / selection bar */
 .key-count {
   display: flex;
   align-items: center;
@@ -409,6 +591,14 @@ defineExpose({ refresh: applySearch });
   font-size: 12px;
   color: var(--text-secondary);
   border-bottom: 1px solid var(--border-muted);
+  gap: 6px;
+}
+
+.key-count-actions {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  flex-shrink: 0;
 }
 
 .load-more-btn {
@@ -416,6 +606,42 @@ defineExpose({ refresh: applySearch });
   padding: 3px 8px;
 }
 
+.select-btn {
+  font-size: 12px;
+  padding: 3px 8px;
+}
+
+.select-delete-btn {
+  font-size: 12px;
+  padding: 3px 8px;
+}
+
+.select-all-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  flex: 1;
+  min-width: 0;
+}
+
+.select-all-label input[type='checkbox'] {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+  cursor: pointer;
+  accent-color: var(--accent);
+}
+
+.select-all-text {
+  font-size: 12px;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Key items */
 .key-items {
   flex: 1;
   overflow-y: auto;
@@ -434,15 +660,36 @@ defineExpose({ refresh: applySearch });
   text-align: left;
   cursor: pointer;
   transition: background 0.1s;
+  outline: none;
 }
 
 .key-item:hover {
   background: var(--bg-hover);
 }
 
+.key-item:focus-visible {
+  box-shadow: inset 0 0 0 2px var(--accent);
+}
+
 .key-item.active {
   background: var(--bg-active);
   border-left: 2px solid var(--accent);
+}
+
+.key-item.is-selected {
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
+}
+
+.key-item.is-selected:hover {
+  background: color-mix(in srgb, var(--accent) 16%, transparent);
+}
+
+.item-checkbox {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+  cursor: pointer;
+  accent-color: var(--accent);
 }
 
 .key-name {

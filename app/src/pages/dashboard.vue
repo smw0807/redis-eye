@@ -40,7 +40,7 @@
         </button>
       </div>
 
-      <KeyList ref="keyListRef" :selected-key="selectedKey" @select="selectKey" />
+      <KeyList ref="keyListRef" :selected-key="selectedKey" @select="selectKey" @bulk-deleted="onBulkDeleted" />
     </aside>
 
     <!-- Main content -->
@@ -142,6 +142,13 @@ function selectKey(key: string) {
 function onKeyDeleted(_key: string) {
   selectedKey.value = null;
   keyListRef.value?.refresh();
+}
+
+function onBulkDeleted(keys: string[]) {
+  if (selectedKey.value && keys.includes(selectedKey.value)) {
+    selectedKey.value = null;
+  }
+  fetchDbs();
 }
 
 function onKeyRenamed(_oldKey: string, newKey: string) {

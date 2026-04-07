@@ -39,4 +39,22 @@ router.get('/keys', async (req, res) => {
   }
 });
 
+// DELETE /api/keys — bulk delete multiple keys
+router.delete('/keys', async (req, res) => {
+  if (!isConnected()) return res.status(400).json({ error: 'Not connected' });
+
+  const { keys } = req.body;
+  if (!Array.isArray(keys) || keys.length === 0) {
+    return res.status(400).json({ error: 'keys array is required' });
+  }
+
+  const client = getClient();
+  try {
+    const count = await client.del(...keys);
+    res.json({ ok: true, deleted: count });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 module.exports = router;
