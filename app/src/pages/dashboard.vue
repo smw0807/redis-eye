@@ -17,32 +17,23 @@
             v-if="dbs.length > 0"
             class="db-select input-field"
             :value="currentDb"
-            @change="switchDb($event)">
-            <option v-for="d in dbs" :key="d.db" :value="d.db">
-              db{{ d.db }} ({{ d.keys }})
-            </option>
+            @change="switchDb($event)"
+          >
+            <option v-for="d in dbs" :key="d.db" :value="d.db">db{{ d.db }} ({{ d.keys }})</option>
           </select>
-          <button
-            class="btn btn-primary add-key-btn"
-            @click="showAddModal = true">
-            + New
-          </button>
+          <button class="btn btn-primary add-key-btn" @click="showAddModal = true">+ New</button>
           <button
             class="btn btn-secondary icon-btn"
             title="Refresh key list"
-            @click="keyListRef?.refresh()">
+            @click="keyListRef?.refresh()"
+          >
             ↻
           </button>
-          <button class="btn btn-secondary disconnect-btn" @click="disconnect">
-            Disconnect
-          </button>
+          <button class="btn btn-secondary disconnect-btn" @click="disconnect">Disconnect</button>
         </div>
       </div>
 
-      <KeyList
-        ref="keyListRef"
-        :selected-key="selectedKey"
-        @select="selectKey" />
+      <KeyList ref="keyListRef" :selected-key="selectedKey" @select="selectKey" />
     </aside>
 
     <!-- Main content -->
@@ -62,15 +53,12 @@
     </main>
   </div>
 
-  <AddKeyModal
-    v-if="showAddModal"
-    @close="showAddModal = false"
-    @created="onKeyCreated" />
+  <AddKeyModal v-if="showAddModal" @close="showAddModal = false" @created="onKeyCreated" />
 </template>
 
 <script setup lang="ts">
-import {ref, onMounted} from 'vue';
-import {useRouter} from 'vue-router';
+import { ref, onMounted } from 'vue';
+import { useRouter } from 'vue-router';
 import KeyList from '../components/KeyList.vue';
 import KeyDetail from '../components/KeyDetail.vue';
 import AddKeyModal from '../components/AddKeyModal.vue';
@@ -123,8 +111,8 @@ async function switchDb(event: Event) {
   try {
     await fetch('/api/db/switch', {
       method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({db}),
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ db }),
     });
     currentDb.value = db;
     selectedKey.value = null;
@@ -136,7 +124,7 @@ async function switchDb(event: Event) {
 }
 
 async function disconnect() {
-  await fetch('/api/disconnect', {method: 'DELETE'});
+  await fetch('/api/disconnect', { method: 'DELETE' });
   router.push('/');
 }
 

@@ -16,7 +16,11 @@
     "dev": "concurrently -n server,app -c cyan,magenta \"npm run dev:server\" \"npm run dev:app\"",
     "dev:server": "nodemon server/index.js",
     "dev:app": "cd app && npm run dev",
-    "build": "cd app && npm install && npm run build"
+    "build": "cd app && npm install && npm run build",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
   },
   "keywords": [
     "redis",
@@ -34,8 +38,15 @@
     "open": "^9.1.0"
   },
   "devDependencies": {
+    "@eslint/js": "^10.0.1",
     "concurrently": "^8.2.0",
-    "nodemon": "^3.1.0"
+    "eslint": "^10.2.0",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-vue": "^10.8.0",
+    "globals": "^17.4.0",
+    "nodemon": "^3.1.0",
+    "prettier": "^3.8.1",
+    "typescript-eslint": "^8.58.0"
   },
   "engines": {
     "node": ">=18"

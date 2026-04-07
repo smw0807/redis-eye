@@ -6,9 +6,7 @@
     </div>
 
     <!-- Loading -->
-    <div v-else-if="loading" class="loading-state">
-      <span class="spinner" /> Loading key…
-    </div>
+    <div v-else-if="loading" class="loading-state"><span class="spinner" /> Loading key…</div>
 
     <!-- Error -->
     <div v-else-if="error" class="error-state">
@@ -39,7 +37,7 @@
 
       <!-- Hash -->
       <div v-else-if="detail.type === 'hash'" class="value-section">
-        <div class="section-label">{{ Object.keys(detail.value as Record<string, string>).length }} fields</div>
+        <div class="section-label">{{ Object.keys(hashValue).length }} fields</div>
         <table class="kv-table">
           <thead>
             <tr>
@@ -48,7 +46,7 @@
             </tr>
           </thead>
           <tbody>
-            <tr v-for="(v, k) in (detail.value as Record<string, string>)" :key="k">
+            <tr v-for="(v, k) in hashValue" :key="k">
               <td class="mono cell-field">{{ k }}</td>
               <td class="mono cell-value">{{ v }}</td>
             </tr>
@@ -115,117 +113,124 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch, computed } from 'vue'
-import TypeBadge from './TypeBadge.vue'
+import { ref, watch, computed } from 'vue';
+import TypeBadge from './TypeBadge.vue';
 
 interface KeyDetail {
-  key: string
-  type: string
-  ttl: number
-  value: unknown
+  key: string;
+  type: string;
+  ttl: number;
+  value: unknown;
 }
 
-const props = defineProps<{ keyName: string | null }>()
-const emit = defineEmits<{ (e: 'deleted', key: string): void }>()
+const props = defineProps<{ keyName: string | null }>();
+const emit = defineEmits<{ (e: 'deleted', key: string): void }>();
 
-const detail = ref<KeyDetail | null>(null)
-const loading = ref(false)
-const error = ref('')
+const detail = ref<KeyDetail | null>(null);
+const loading = ref(false);
+const error = ref('');
 
 function encodeKey(key: string) {
-  return btoa(key).replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '')
+  return btoa(key).replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
 }
 
 async function fetchDetail(key: string) {
-  loading.value = true
-  error.value = ''
-  detail.value = null
+  loading.value = true;
+  error.value = '';
+  detail.value = null;
 
   try {
-    const res = await fetch(`/api/key/${encodeKey(key)}`)
-    const data = await res.json()
+    const res = await fetch(`/api/key/${encodeKey(key)}`);
+    const data = await res.json();
 
     if (!res.ok) {
-      error.value = data.error || 'Failed to load key'
+      error.value = data.error || 'Failed to load key';
     } else {
-      detail.value = data
+      detail.value = data;
     }
   } catch (e: unknown) {
-    error.value = e instanceof Error ? e.message : 'Network error'
+    error.value = e instanceof Error ? e.message : 'Network error';
   } finally {
-    loading.value = false
+    loading.value = false;
   }
 }
 
 async function deleteKey() {
-  if (!detail.value) return
-  if (!confirm(`Delete key "${detail.value.key}"?`)) return
+  if (!detail.value) return;
+  if (!confirm(`Delete key "${detail.value.key}"?`)) return;
 
   try {
-    await fetch(`/api/key/${encodeKey(detail.value.key)}`, { method: 'DELETE' })
-    emit('deleted', detail.value.key)
-    detail.value = null
+    await fetch(`/api/key/${encodeKey(detail.value.key)}`, { method: 'DELETE' });
+    emit('deleted', detail.value.key);
+    detail.value = null;
   } catch (e: unknown) {
-    error.value = e instanceof Error ? e.message : 'Delete failed'
+    error.value = e instanceof Error ? e.message : 'Delete failed';
   }
 }
 
 function formatTtl(ttl: number) {
-  if (ttl === -1) return 'No expiry'
-  if (ttl === -2) return 'Expired'
-  if (ttl < 1000) return `${ttl} ms`
-  const sec = Math.floor(ttl / 1000)
-  if (sec < 60) return `${sec}s`
-  if (sec < 3600) return `${Math.floor(sec / 60)}m ${sec % 60}s`
-  return `${Math.floor(sec / 3600)}h ${Math.floor((sec % 3600) / 60)}m`
+  if (ttl === -1) return 'No expiry';
+  if (ttl === -2) return 'Expired';
+  if (ttl < 1000) return `${ttl} ms`;
+  const sec = Math.floor(ttl / 1000);
+  if (sec < 60) return `${sec}s`;
+  if (sec < 3600) return `${Math.floor(sec / 60)}m ${sec % 60}s`;
+  return `${Math.floor(sec / 3600)}h ${Math.floor((sec % 3600) / 60)}m`;
 }
 
 function isJson(v: string) {
-  if (!v || (v[0] !== '{' && v[0] !== '[')) return false
+  if (!v || (v[0] !== '{' && v[0] !== '[')) return false;
   try {
-    JSON.parse(v)
-    return true
+    JSON.parse(v);
+    return true;
   } catch {
-    return false
+    return false;
   }
 }
 
 function prettyJson(v: string) {
   try {
-    return JSON.stringify(JSON.parse(v), null, 2)
+    return JSON.stringify(JSON.parse(v), null, 2);
   } catch {
-    return v
+    return v;
   }
 }
 
 const listInfo = computed(() => {
-  const v = detail.value?.value
-  if (Array.isArray(v)) return { items: v, total: v.length, truncated: false }
-  if (v && typeof v === 'object' && 'items' in v) return v as { items: string[]; total: number; truncated: boolean }
-  return { items: [], total: 0, truncated: false }
-})
+  const v = detail.value?.value;
+  if (Array.isArray(v)) return { items: v, total: v.length, truncated: false };
+  if (v && typeof v === 'object' && 'items' in v)
+    return v as { items: string[]; total: number; truncated: boolean };
+  return { items: [], total: 0, truncated: false };
+});
 
 const setInfo = computed(() => {
-  const v = detail.value?.value as { items: string[]; total: number; truncated: boolean } | undefined
-  return v ?? { items: [], total: 0, truncated: false }
-})
+  const v = detail.value?.value as
+    | { items: string[]; total: number; truncated: boolean }
+    | undefined;
+  return v ?? { items: [], total: 0, truncated: false };
+});
 
 const zsetInfo = computed(() => {
-  const v = detail.value?.value as { items: { member: string; score: number }[]; total: number; truncated: boolean } | undefined
-  return v ?? { items: [], total: 0, truncated: false }
-})
+  const v = detail.value?.value as
+    | { items: { member: string; score: number }[]; total: number; truncated: boolean }
+    | undefined;
+  return v ?? { items: [], total: 0, truncated: false };
+});
+
+const hashValue = computed(() => (detail.value?.value ?? {}) as Record<string, string>);
 
 watch(
   () => props.keyName,
   (key) => {
-    if (key) fetchDetail(key)
+    if (key) fetchDetail(key);
     else {
-      detail.value = null
-      error.value = ''
+      detail.value = null;
+      error.value = '';
     }
   },
   { immediate: true }
-)
+);
 </script>
 
 <style scoped>

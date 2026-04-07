@@ -50,7 +50,8 @@
     <!-- Key count -->
     <div class="key-count">
       <span v-if="filteredItems.length > 0">
-        {{ filteredItems.length }}{{ activeType ? ` ${activeType}` : '' }}{{ expiringFilter ? ' expiring' : '' }} keys
+        {{ filteredItems.length }}{{ activeType ? ` ${activeType}` : ''
+        }}{{ expiringFilter ? ' expiring' : '' }} keys
         <template v-if="!done"> loaded</template>
       </span>
       <span v-else-if="loading">Loading…</span>
@@ -61,7 +62,7 @@
     </div>
 
     <!-- Key items -->
-    <div class="key-items" ref="listEl">
+    <div ref="listEl" class="key-items">
       <button
         v-for="item in filteredItems"
         :key="item.key"
@@ -71,199 +72,193 @@
       >
         <TypeBadge :type="item.type" />
         <span class="key-name mono">{{ item.key }}</span>
-        <span
-          v-if="item.expireAt !== -1"
-          class="ttl-badge"
-          :class="getTtlClass(item)"
-        >{{ formatRemainingTtl(item) }}</span>
+        <span v-if="item.expireAt !== -1" class="ttl-badge" :class="getTtlClass(item)">{{
+          formatRemainingTtl(item)
+        }}</span>
       </button>
 
       <!-- Sentinel for infinite scroll -->
       <div ref="sentinelEl" class="sentinel" />
     </div>
 
-    <div v-if="loading" class="loading-row">
-      <span class="spinner" /> Loading…
-    </div>
+    <div v-if="loading" class="loading-row"><span class="spinner" /> Loading…</div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted } from 'vue'
-import TypeBadge from './TypeBadge.vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue';
+import TypeBadge from './TypeBadge.vue';
 
 interface KeyItem {
-  key: string
-  type: string
-  expireAt: number // Date.now() + ttl, or -1 for no expiry
+  key: string;
+  type: string;
+  expireAt: number; // Date.now() + ttl, or -1 for no expiry
 }
 
-const TYPES = ['string', 'hash', 'list', 'set', 'zset'] as const
-type RedisType = (typeof TYPES)[number]
+const TYPES = ['string', 'hash', 'list', 'set', 'zset'] as const;
+type RedisType = (typeof TYPES)[number];
 
-const HISTORY_KEY = 'redis-eye-search-history'
-const MAX_HISTORY = 8
-const EXPIRING_THRESHOLD_MS = 5 * 60 * 1000 // 5 minutes
+const HISTORY_KEY = 'redis-eye-search-history';
+const MAX_HISTORY = 8;
+const EXPIRING_THRESHOLD_MS = 5 * 60 * 1000; // 5 minutes
 
-defineProps<{ selectedKey: string | null }>()
-defineEmits<{ (e: 'select', key: string): void }>()
+defineProps<{ selectedKey: string | null }>();
+defineEmits<{ (e: 'select', key: string): void }>();
 
-const items = ref<KeyItem[]>([])
-const cursor = ref('0')
-const done = ref(false)
-const loading = ref(false)
-const searchInput = ref('')
-const matchPattern = ref('*')
-const activeType = ref<RedisType | null>(null)
-const expiringFilter = ref(false)
+const items = ref<KeyItem[]>([]);
+const cursor = ref('0');
+const done = ref(false);
+const loading = ref(false);
+const searchInput = ref('');
+const matchPattern = ref('*');
+const activeType = ref<RedisType | null>(null);
+const expiringFilter = ref(false);
 
-const now = ref(Date.now())
+const now = ref(Date.now());
 
-const searchHistory = ref<string[]>(
-  JSON.parse(localStorage.getItem(HISTORY_KEY) ?? '[]'),
-)
-const showHistory = ref(false)
+const searchHistory = ref<string[]>(JSON.parse(localStorage.getItem(HISTORY_KEY) ?? '[]'));
+const showHistory = ref(false);
 
 const filteredItems = computed(() => {
-  let result = items.value
+  let result = items.value;
   if (activeType.value) {
-    result = result.filter((i) => i.type === activeType.value)
+    result = result.filter((i) => i.type === activeType.value);
   }
   if (expiringFilter.value) {
     result = result.filter((i) => {
-      if (i.expireAt === -1) return false
-      const remaining = i.expireAt - now.value
-      return remaining > 0 && remaining <= EXPIRING_THRESHOLD_MS
-    })
+      if (i.expireAt === -1) return false;
+      const remaining = i.expireAt - now.value;
+      return remaining > 0 && remaining <= EXPIRING_THRESHOLD_MS;
+    });
   }
-  return result
-})
+  return result;
+});
 
-const listEl = ref<HTMLElement | null>(null)
-const sentinelEl = ref<HTMLElement | null>(null)
-let observer: IntersectionObserver | null = null
-let tickInterval: ReturnType<typeof setInterval> | null = null
+const listEl = ref<HTMLElement | null>(null);
+const sentinelEl = ref<HTMLElement | null>(null);
+let observer: IntersectionObserver | null = null;
+let tickInterval: ReturnType<typeof setInterval> | null = null;
 
 function toggleType(t: RedisType) {
-  activeType.value = activeType.value === t ? null : t
+  activeType.value = activeType.value === t ? null : t;
 }
 
 function getRemainingMs(item: KeyItem): number {
-  if (item.expireAt === -1) return -1
-  return Math.max(0, item.expireAt - now.value)
+  if (item.expireAt === -1) return -1;
+  return Math.max(0, item.expireAt - now.value);
 }
 
 function formatRemainingTtl(item: KeyItem): string {
-  const ms = getRemainingMs(item)
-  if (ms === -1) return ''
-  if (ms === 0) return 'expired'
-  if (ms < 1000) return `${ms}ms`
-  const s = Math.floor(ms / 1000)
-  if (s < 60) return `${s}s`
-  const m = Math.floor(s / 60)
-  if (m < 60) return `${m}m ${s % 60}s`
-  const h = Math.floor(m / 60)
-  return `${h}h ${m % 60}m`
+  const ms = getRemainingMs(item);
+  if (ms === -1) return '';
+  if (ms === 0) return 'expired';
+  if (ms < 1000) return `${ms}ms`;
+  const s = Math.floor(ms / 1000);
+  if (s < 60) return `${s}s`;
+  const m = Math.floor(s / 60);
+  if (m < 60) return `${m}m ${s % 60}s`;
+  const h = Math.floor(m / 60);
+  return `${h}h ${m % 60}m`;
 }
 
 function getTtlClass(item: KeyItem): string {
-  const ms = getRemainingMs(item)
-  if (ms <= 0) return 'ttl-expired'
-  if (ms < 30_000) return 'ttl-urgent'
-  if (ms < EXPIRING_THRESHOLD_MS) return 'ttl-warning'
-  return 'ttl-normal'
+  const ms = getRemainingMs(item);
+  if (ms <= 0) return 'ttl-expired';
+  if (ms < 30_000) return 'ttl-urgent';
+  if (ms < EXPIRING_THRESHOLD_MS) return 'ttl-warning';
+  return 'ttl-normal';
 }
 
 function saveToHistory(pattern: string) {
-  if (!pattern || pattern === '*') return
+  if (!pattern || pattern === '*') return;
   const updated = [pattern, ...searchHistory.value.filter((h) => h !== pattern)].slice(
     0,
-    MAX_HISTORY,
-  )
-  searchHistory.value = updated
-  localStorage.setItem(HISTORY_KEY, JSON.stringify(updated))
+    MAX_HISTORY
+  );
+  searchHistory.value = updated;
+  localStorage.setItem(HISTORY_KEY, JSON.stringify(updated));
 }
 
 function selectHistory(pattern: string) {
-  searchInput.value = pattern
-  showHistory.value = false
-  applySearch()
+  searchInput.value = pattern;
+  showHistory.value = false;
+  applySearch();
 }
 
 function onSearchBlur() {
   setTimeout(() => {
-    showHistory.value = false
-  }, 150)
+    showHistory.value = false;
+  }, 150);
 }
 
 async function loadMore() {
-  if (loading.value || done.value) return
-  loading.value = true
+  if (loading.value || done.value) return;
+  loading.value = true;
 
   try {
     const params = new URLSearchParams({
       cursor: cursor.value,
       match: matchPattern.value,
       count: '100',
-    })
-    const res = await fetch(`/api/keys?${params}`)
-    const data = await res.json()
+    });
+    const res = await fetch(`/api/keys?${params}`);
+    const data = await res.json();
 
-    const fetchedAt = Date.now()
+    const fetchedAt = Date.now();
     items.value.push(
       ...data.items.map((item: { key: string; type: string; ttl: number }) => ({
         key: item.key,
         type: item.type,
         expireAt: item.ttl === -1 ? -1 : item.ttl < 0 ? 0 : fetchedAt + item.ttl,
-      })),
-    )
-    cursor.value = data.cursor
-    done.value = data.done
+      }))
+    );
+    cursor.value = data.cursor;
+    done.value = data.done;
   } catch (e) {
-    console.error('Failed to load keys:', e)
+    console.error('Failed to load keys:', e);
   } finally {
-    loading.value = false
+    loading.value = false;
   }
 }
 
 function applySearch() {
-  const trimmed = searchInput.value.trim()
-  saveToHistory(trimmed)
-  matchPattern.value = trimmed || '*'
-  items.value = []
-  cursor.value = '0'
-  done.value = false
-  showHistory.value = false
-  loadMore()
+  const trimmed = searchInput.value.trim();
+  saveToHistory(trimmed);
+  matchPattern.value = trimmed || '*';
+  items.value = [];
+  cursor.value = '0';
+  done.value = false;
+  showHistory.value = false;
+  loadMore();
 }
 
 function setupObserver() {
-  if (!sentinelEl.value) return
+  if (!sentinelEl.value) return;
   observer = new IntersectionObserver(
     (entries) => {
       if (entries[0].isIntersecting && !loading.value && !done.value) {
-        loadMore()
+        loadMore();
       }
     },
-    { root: listEl.value, rootMargin: '100px' },
-  )
-  observer.observe(sentinelEl.value)
+    { root: listEl.value, rootMargin: '100px' }
+  );
+  observer.observe(sentinelEl.value);
 }
 
 onMounted(() => {
-  loadMore()
-  setupObserver()
+  loadMore();
+  setupObserver();
   tickInterval = setInterval(() => {
-    now.value = Date.now()
-  }, 1000)
-})
+    now.value = Date.now();
+  }, 1000);
+});
 
 onUnmounted(() => {
-  observer?.disconnect()
-  if (tickInterval) clearInterval(tickInterval)
-})
+  observer?.disconnect();
+  if (tickInterval) clearInterval(tickInterval);
+});
 
-defineExpose({ refresh: applySearch })
+defineExpose({ refresh: applySearch });
 </script>
 
 <style scoped>
@@ -320,7 +315,9 @@ defineExpose({ refresh: applySearch })
   text-align: left;
   font-size: 12px;
   cursor: pointer;
-  transition: background 0.1s, color 0.1s;
+  transition:
+    background 0.1s,
+    color 0.1s;
 }
 
 .history-item:last-child {
@@ -361,14 +358,37 @@ defineExpose({ refresh: applySearch })
   text-transform: uppercase;
   letter-spacing: 0.03em;
   cursor: pointer;
-  transition: background 0.15s, color 0.15s, border-color 0.15s;
+  transition:
+    background 0.15s,
+    color 0.15s,
+    border-color 0.15s;
 }
 
-.type-btn.type-string.active  { background: color-mix(in srgb, var(--type-string) 20%, transparent); color: var(--type-string); border-color: var(--type-string); }
-.type-btn.type-hash.active    { background: color-mix(in srgb, var(--type-hash)   20%, transparent); color: var(--type-hash);   border-color: var(--type-hash); }
-.type-btn.type-list.active    { background: color-mix(in srgb, var(--type-list)   20%, transparent); color: var(--type-list);   border-color: var(--type-list); }
-.type-btn.type-set.active     { background: color-mix(in srgb, var(--type-set)    20%, transparent); color: var(--type-set);    border-color: var(--type-set); }
-.type-btn.type-zset.active    { background: color-mix(in srgb, var(--type-zset)   20%, transparent); color: var(--type-zset);   border-color: var(--type-zset); }
+.type-btn.type-string.active {
+  background: color-mix(in srgb, var(--type-string) 20%, transparent);
+  color: var(--type-string);
+  border-color: var(--type-string);
+}
+.type-btn.type-hash.active {
+  background: color-mix(in srgb, var(--type-hash) 20%, transparent);
+  color: var(--type-hash);
+  border-color: var(--type-hash);
+}
+.type-btn.type-list.active {
+  background: color-mix(in srgb, var(--type-list) 20%, transparent);
+  color: var(--type-list);
+  border-color: var(--type-list);
+}
+.type-btn.type-set.active {
+  background: color-mix(in srgb, var(--type-set) 20%, transparent);
+  color: var(--type-set);
+  border-color: var(--type-set);
+}
+.type-btn.type-zset.active {
+  background: color-mix(in srgb, var(--type-zset) 20%, transparent);
+  color: var(--type-zset);
+  border-color: var(--type-zset);
+}
 
 .expiring-btn.active {
   background: color-mix(in srgb, var(--warning) 20%, transparent);
@@ -444,10 +464,23 @@ defineExpose({ refresh: applySearch })
   letter-spacing: 0.02em;
 }
 
-.ttl-normal  { color: var(--text-muted); background: var(--bg-elevated); }
-.ttl-warning { color: var(--warning);    background: color-mix(in srgb, var(--warning) 15%, transparent); }
-.ttl-urgent  { color: var(--danger);     background: color-mix(in srgb, var(--danger)  15%, transparent); }
-.ttl-expired { color: var(--danger);     background: color-mix(in srgb, var(--danger)  15%, transparent); opacity: 0.7; }
+.ttl-normal {
+  color: var(--text-muted);
+  background: var(--bg-elevated);
+}
+.ttl-warning {
+  color: var(--warning);
+  background: color-mix(in srgb, var(--warning) 15%, transparent);
+}
+.ttl-urgent {
+  color: var(--danger);
+  background: color-mix(in srgb, var(--danger) 15%, transparent);
+}
+.ttl-expired {
+  color: var(--danger);
+  background: color-mix(in srgb, var(--danger) 15%, transparent);
+  opacity: 0.7;
+}
 
 .loading-row {
   display: flex;

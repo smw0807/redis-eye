@@ -36,6 +36,7 @@ npm start        # node bin/cli.js 와 동일
 ### 키 URL 인코딩
 
 `GET /api/key/:id` — 키 이름에 슬래시 등 특수문자가 포함될 수 있으므로 **base64url로 인코딩**해서 URL에 담는다.
+
 - 서버: `Buffer.from(id, 'base64url').toString('utf8')`로 디코딩
 - 프론트엔드: `btoa(key).replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '')`로 인코딩
 

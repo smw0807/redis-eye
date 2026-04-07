@@ -19,7 +19,9 @@
               class="type-btn"
               :class="[`type-${t}`, { active: selectedType === t }]"
               @click="selectedType = t"
-            >{{ t }}</button>
+            >
+              {{ t }}
+            </button>
           </div>
         </div>
 
@@ -57,9 +59,17 @@
             <div v-for="(row, i) in hashFields" :key="i" class="field-row">
               <input v-model="row.field" class="input-field mono" placeholder="field" />
               <input v-model="row.value" class="input-field mono" placeholder="value" />
-              <button class="remove-btn" :disabled="hashFields.length === 1" @click="hashFields.splice(i, 1)">✕</button>
+              <button
+                class="remove-btn"
+                :disabled="hashFields.length === 1"
+                @click="hashFields.splice(i, 1)"
+              >
+                ✕
+              </button>
             </div>
-            <button class="add-btn" @click="hashFields.push({ field: '', value: '' })">+ Add field</button>
+            <button class="add-btn" @click="hashFields.push({ field: '', value: '' })">
+              + Add field
+            </button>
           </div>
 
           <!-- List -->
@@ -69,7 +79,13 @@
             </div>
             <div v-for="(_, i) in listItems" :key="i" class="field-row field-row--single">
               <input v-model="listItems[i]" class="input-field mono" placeholder="value" />
-              <button class="remove-btn" :disabled="listItems.length === 1" @click="listItems.splice(i, 1)">✕</button>
+              <button
+                class="remove-btn"
+                :disabled="listItems.length === 1"
+                @click="listItems.splice(i, 1)"
+              >
+                ✕
+              </button>
             </div>
             <button class="add-btn" @click="listItems.push('')">+ Add item</button>
           </div>
@@ -81,7 +97,13 @@
             </div>
             <div v-for="(_, i) in setMembers" :key="i" class="field-row field-row--single">
               <input v-model="setMembers[i]" class="input-field mono" placeholder="member" />
-              <button class="remove-btn" :disabled="setMembers.length === 1" @click="setMembers.splice(i, 1)">✕</button>
+              <button
+                class="remove-btn"
+                :disabled="setMembers.length === 1"
+                @click="setMembers.splice(i, 1)"
+              >
+                ✕
+              </button>
             </div>
             <button class="add-btn" @click="setMembers.push('')">+ Add member</button>
           </div>
@@ -93,16 +115,19 @@
               <span>Member</span>
             </div>
             <div v-for="(row, i) in zsetItems" :key="i" class="field-row field-row--zset">
-              <input
-                v-model="row.score"
-                class="input-field mono"
-                type="number"
-                placeholder="0"
-              />
+              <input v-model="row.score" class="input-field mono" type="number" placeholder="0" />
               <input v-model="row.member" class="input-field mono" placeholder="member" />
-              <button class="remove-btn" :disabled="zsetItems.length === 1" @click="zsetItems.splice(i, 1)">✕</button>
+              <button
+                class="remove-btn"
+                :disabled="zsetItems.length === 1"
+                @click="zsetItems.splice(i, 1)"
+              >
+                ✕
+              </button>
             </div>
-            <button class="add-btn" @click="zsetItems.push({ member: '', score: '' })">+ Add member</button>
+            <button class="add-btn" @click="zsetItems.push({ member: '', score: '' })">
+              + Add member
+            </button>
           </div>
         </div>
 
@@ -111,11 +136,11 @@
           <div class="form-label">TTL</div>
           <div class="ttl-options">
             <label class="ttl-radio">
-              <input type="radio" v-model="ttlEnabled" :value="false" />
+              <input v-model="ttlEnabled" type="radio" :value="false" />
               No expiry
             </label>
             <label class="ttl-radio">
-              <input type="radio" v-model="ttlEnabled" :value="true" />
+              <input v-model="ttlEnabled" type="radio" :value="true" />
               Expires in
               <input
                 v-model.number="ttlSeconds"
@@ -146,113 +171,113 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref } from 'vue';
 
-const TYPES = ['string', 'hash', 'list', 'set', 'zset'] as const
-type RedisType = (typeof TYPES)[number]
+const TYPES = ['string', 'hash', 'list', 'set', 'zset'] as const;
+type RedisType = (typeof TYPES)[number];
 
 const emit = defineEmits<{
-  (e: 'close'): void
-  (e: 'created', key: string): void
-}>()
+  (e: 'close'): void;
+  (e: 'created', key: string): void;
+}>();
 
-const selectedType = ref<RedisType>('string')
-const keyName = ref('')
-const error = ref('')
-const submitting = ref(false)
+const selectedType = ref<RedisType>('string');
+const keyName = ref('');
+const error = ref('');
+const submitting = ref(false);
 
 // TTL
-const ttlEnabled = ref(false)
-const ttlSeconds = ref(60)
+const ttlEnabled = ref(false);
+const ttlSeconds = ref(60);
 
 // Type-specific values
-const stringValue = ref('')
-const hashFields = ref([{ field: '', value: '' }])
-const listItems = ref([''])
-const setMembers = ref([''])
-const zsetItems = ref([{ member: '', score: '' }])
+const stringValue = ref('');
+const hashFields = ref([{ field: '', value: '' }]);
+const listItems = ref(['']);
+const setMembers = ref(['']);
+const zsetItems = ref([{ member: '', score: '' }]);
 
 async function submit() {
-  error.value = ''
+  error.value = '';
 
-  const key = keyName.value.trim()
+  const key = keyName.value.trim();
   if (!key) {
-    error.value = 'Key name is required'
-    return
+    error.value = 'Key name is required';
+    return;
   }
 
   if (ttlEnabled.value && (!ttlSeconds.value || ttlSeconds.value < 1)) {
-    error.value = 'TTL must be at least 1 second'
-    return
+    error.value = 'TTL must be at least 1 second';
+    return;
   }
 
-  let value: unknown
+  let value: unknown;
 
   switch (selectedType.value) {
     case 'string':
-      value = stringValue.value
-      break
+      value = stringValue.value;
+      break;
 
     case 'hash': {
-      const obj: Record<string, string> = {}
+      const obj: Record<string, string> = {};
       for (const row of hashFields.value) {
         if (!row.field.trim()) {
-          error.value = 'Field name cannot be empty'
-          return
+          error.value = 'Field name cannot be empty';
+          return;
         }
-        obj[row.field.trim()] = row.value
+        obj[row.field.trim()] = row.value;
       }
       if (Object.keys(obj).length === 0) {
-        error.value = 'Add at least one field'
-        return
+        error.value = 'Add at least one field';
+        return;
       }
-      value = obj
-      break
+      value = obj;
+      break;
     }
 
     case 'list': {
-      const items = listItems.value.filter((v) => v.trim() !== '')
+      const items = listItems.value.filter((v) => v.trim() !== '');
       if (items.length === 0) {
-        error.value = 'Add at least one item'
-        return
+        error.value = 'Add at least one item';
+        return;
       }
-      value = items
-      break
+      value = items;
+      break;
     }
 
     case 'set': {
-      const members = setMembers.value.filter((v) => v.trim() !== '')
+      const members = setMembers.value.filter((v) => v.trim() !== '');
       if (members.length === 0) {
-        error.value = 'Add at least one member'
-        return
+        error.value = 'Add at least one member';
+        return;
       }
-      value = members
-      break
+      value = members;
+      break;
     }
 
     case 'zset': {
-      const items = []
+      const items = [];
       for (const row of zsetItems.value) {
         if (!row.member.trim()) {
-          error.value = 'Member cannot be empty'
-          return
+          error.value = 'Member cannot be empty';
+          return;
         }
         if (row.score === '' || isNaN(Number(row.score))) {
-          error.value = 'Score must be a valid number'
-          return
+          error.value = 'Score must be a valid number';
+          return;
         }
-        items.push({ member: row.member.trim(), score: Number(row.score) })
+        items.push({ member: row.member.trim(), score: Number(row.score) });
       }
       if (items.length === 0) {
-        error.value = 'Add at least one member'
-        return
+        error.value = 'Add at least one member';
+        return;
       }
-      value = items
-      break
+      value = items;
+      break;
     }
   }
 
-  submitting.value = true
+  submitting.value = true;
   try {
     const res = await fetch('/api/key', {
       method: 'POST',
@@ -263,17 +288,17 @@ async function submit() {
         value,
         ttl: ttlEnabled.value ? ttlSeconds.value : undefined,
       }),
-    })
-    const data = await res.json()
+    });
+    const data = await res.json();
     if (!res.ok) {
-      error.value = data.error || 'Failed to create key'
-      return
+      error.value = data.error || 'Failed to create key';
+      return;
     }
-    emit('created', key)
+    emit('created', key);
   } catch {
-    error.value = 'Network error'
+    error.value = 'Network error';
   } finally {
-    submitting.value = false
+    submitting.value = false;
   }
 }
 </script>
@@ -325,7 +350,9 @@ async function submit() {
   font-size: 14px;
   padding: 4px 6px;
   border-radius: var(--radius-sm);
-  transition: color 0.15s, background 0.15s;
+  transition:
+    color 0.15s,
+    background 0.15s;
 }
 
 .close-btn:hover {
@@ -368,7 +395,10 @@ async function submit() {
   text-transform: uppercase;
   letter-spacing: 0.03em;
   cursor: pointer;
-  transition: background 0.15s, color 0.15s, border-color 0.15s;
+  transition:
+    background 0.15s,
+    color 0.15s,
+    border-color 0.15s;
 }
 
 .type-btn:not(.active):hover {
@@ -376,11 +406,31 @@ async function submit() {
   color: var(--text-primary);
 }
 
-.type-btn.type-string.active  { background: color-mix(in srgb, var(--type-string) 20%, transparent); color: var(--type-string); border-color: var(--type-string); }
-.type-btn.type-hash.active    { background: color-mix(in srgb, var(--type-hash)   20%, transparent); color: var(--type-hash);   border-color: var(--type-hash); }
-.type-btn.type-list.active    { background: color-mix(in srgb, var(--type-list)   20%, transparent); color: var(--type-list);   border-color: var(--type-list); }
-.type-btn.type-set.active     { background: color-mix(in srgb, var(--type-set)    20%, transparent); color: var(--type-set);    border-color: var(--type-set); }
-.type-btn.type-zset.active    { background: color-mix(in srgb, var(--type-zset)   20%, transparent); color: var(--type-zset);   border-color: var(--type-zset); }
+.type-btn.type-string.active {
+  background: color-mix(in srgb, var(--type-string) 20%, transparent);
+  color: var(--type-string);
+  border-color: var(--type-string);
+}
+.type-btn.type-hash.active {
+  background: color-mix(in srgb, var(--type-hash) 20%, transparent);
+  color: var(--type-hash);
+  border-color: var(--type-hash);
+}
+.type-btn.type-list.active {
+  background: color-mix(in srgb, var(--type-list) 20%, transparent);
+  color: var(--type-list);
+  border-color: var(--type-list);
+}
+.type-btn.type-set.active {
+  background: color-mix(in srgb, var(--type-set) 20%, transparent);
+  color: var(--type-set);
+  border-color: var(--type-set);
+}
+.type-btn.type-zset.active {
+  background: color-mix(in srgb, var(--type-zset) 20%, transparent);
+  color: var(--type-zset);
+  border-color: var(--type-zset);
+}
 
 /* String textarea */
 .string-value {
@@ -442,7 +492,10 @@ async function submit() {
   color: var(--text-muted);
   font-size: 11px;
   cursor: pointer;
-  transition: color 0.15s, background 0.15s, border-color 0.15s;
+  transition:
+    color 0.15s,
+    background 0.15s,
+    border-color 0.15s;
   flex-shrink: 0;
 }
 
@@ -467,7 +520,10 @@ async function submit() {
   padding: 5px 12px;
   cursor: pointer;
   margin-top: 2px;
-  transition: color 0.15s, border-color 0.15s, background 0.15s;
+  transition:
+    color 0.15s,
+    border-color 0.15s,
+    background 0.15s;
 }
 
 .add-btn:hover {

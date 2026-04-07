@@ -1,8 +1,8 @@
-'use strict'
+'use strict';
 
-const Redis = require('ioredis')
+const Redis = require('ioredis');
 
-let client = null
+let client = null;
 
 /**
  * Connect to Redis with given options.
@@ -10,7 +10,7 @@ let client = null
  */
 async function connect({ host = '127.0.0.1', port = 6379, password, db = 0 } = {}) {
   if (client) {
-    await disconnect()
+    await disconnect();
   }
 
   const options = {
@@ -21,38 +21,38 @@ async function connect({ host = '127.0.0.1', port = 6379, password, db = 0 } = {
     connectTimeout: 5000,
     maxRetriesPerRequest: 1,
     enableReadyCheck: true,
-  }
+  };
 
   if (password) {
-    options.password = password
+    options.password = password;
   }
 
-  client = new Redis(options)
+  client = new Redis(options);
 
   // Ensure connection errors don't cause unhandled rejections after connect()
-  client.on('error', () => {})
+  client.on('error', () => {});
 
-  await client.connect()
-  return client
+  await client.connect();
+  return client;
 }
 
 async function disconnect() {
   if (client) {
     try {
-      await client.quit()
+      await client.quit();
     } catch (_) {
-      client.disconnect()
+      client.disconnect();
     }
-    client = null
+    client = null;
   }
 }
 
 function getClient() {
-  return client
+  return client;
 }
 
 function isConnected() {
-  return client !== null && client.status === 'ready'
+  return client !== null && client.status === 'ready';
 }
 
-module.exports = { connect, disconnect, getClient, isConnected }
+module.exports = { connect, disconnect, getClient, isConnected };

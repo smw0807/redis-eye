@@ -1,6 +1,6 @@
-import { createRouter, createWebHistory } from 'vue-router'
-import IndexPage from './pages/index.vue'
-import DashboardPage from './pages/dashboard.vue'
+import { createRouter, createWebHistory } from 'vue-router';
+import IndexPage from './pages/index.vue';
+import DashboardPage from './pages/dashboard.vue';
 
 const router = createRouter({
   history: createWebHistory(),
@@ -8,23 +8,23 @@ const router = createRouter({
     { path: '/', component: IndexPage },
     { path: '/dashboard', component: DashboardPage },
   ],
-})
+});
 
 // Guard: redirect to / if not connected
 router.beforeEach(async (to, _from, next) => {
-  if (to.path === '/') return next()
+  if (to.path === '/') return next();
 
   try {
-    const res = await fetch('/api/status')
-    const data = await res.json()
+    const res = await fetch('/api/status');
+    const data = await res.json();
     if (data.connected) {
-      next()
+      next();
     } else {
-      next('/')
+      next('/');
     }
   } catch {
-    next('/')
+    next('/');
   }
-})
+});
 
-export default router
+export default router;

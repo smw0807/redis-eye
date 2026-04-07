@@ -2,9 +2,7 @@
   <div class="connect-page">
     <div class="connect-card card">
       <div class="connect-header">
-        <h1 class="connect-title">
-          <span class="logo-icon">⬡</span> redis-eye
-        </h1>
+        <h1 class="connect-title"><span class="logo-icon">⬡</span> redis-eye</h1>
         <p class="connect-subtitle">Connect to your Redis instance</p>
       </div>
 
@@ -108,83 +106,83 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
+import { ref, reactive, onMounted } from 'vue';
+import { useRouter } from 'vue-router';
 
 interface Profile {
-  name: string
-  host: string
-  port: number
-  db: number
-  password?: string
+  name: string;
+  host: string;
+  port: number;
+  db: number;
+  password?: string;
 }
 
-const router = useRouter()
-const loading = ref(false)
-const error = ref('')
-const selectedProfile = ref('')
-const profileName = ref('')
+const router = useRouter();
+const loading = ref(false);
+const error = ref('');
+const selectedProfile = ref('');
+const profileName = ref('');
 
 const form = reactive({
   host: '127.0.0.1',
   port: 6379,
   password: '',
   db: 0,
-})
+});
 
-const profiles = ref<Profile[]>([])
+const profiles = ref<Profile[]>([]);
 
-const STORAGE_KEY = 'redis-eye-profiles'
+const STORAGE_KEY = 'redis-eye-profiles';
 
 function loadProfiles() {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY)
-    profiles.value = raw ? JSON.parse(raw) : []
+    const raw = localStorage.getItem(STORAGE_KEY);
+    profiles.value = raw ? JSON.parse(raw) : [];
   } catch {
-    profiles.value = []
+    profiles.value = [];
   }
 }
 
 function saveProfile() {
-  const name = profileName.value.trim()
-  if (!name) return
+  const name = profileName.value.trim();
+  if (!name) return;
 
-  const existing = profiles.value.findIndex((p) => p.name === name)
+  const existing = profiles.value.findIndex((p) => p.name === name);
   const p: Profile = {
     name,
     host: form.host || '127.0.0.1',
     port: form.port || 6379,
     db: form.db || 0,
     password: form.password || undefined,
-  }
+  };
 
   if (existing >= 0) {
-    profiles.value[existing] = p
+    profiles.value[existing] = p;
   } else {
-    profiles.value.push(p)
+    profiles.value.push(p);
   }
 
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(profiles.value))
-  profileName.value = ''
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(profiles.value));
+  profileName.value = '';
 }
 
 function loadProfile(p: Profile) {
-  selectedProfile.value = p.name
-  form.host = p.host
-  form.port = p.port
-  form.db = p.db
-  form.password = p.password || ''
+  selectedProfile.value = p.name;
+  form.host = p.host;
+  form.port = p.port;
+  form.db = p.db;
+  form.password = p.password || '';
 }
 
 function deleteProfile(name: string) {
-  profiles.value = profiles.value.filter((p) => p.name !== name)
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(profiles.value))
-  if (selectedProfile.value === name) selectedProfile.value = ''
+  profiles.value = profiles.value.filter((p) => p.name !== name);
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(profiles.value));
+  if (selectedProfile.value === name) selectedProfile.value = '';
 }
 
 async function handleConnect() {
-  error.value = ''
-  loading.value = true
+  error.value = '';
+  loading.value = true;
 
   try {
     const res = await fetch('/api/connect', {
@@ -196,22 +194,22 @@ async function handleConnect() {
         password: form.password || undefined,
         db: form.db || 0,
       }),
-    })
-    const data = await res.json()
+    });
+    const data = await res.json();
 
     if (data.ok) {
-      router.push('/dashboard')
+      router.push('/dashboard');
     } else {
-      error.value = data.error || 'Connection failed'
+      error.value = data.error || 'Connection failed';
     }
   } catch (e: unknown) {
-    error.value = e instanceof Error ? e.message : 'Network error'
+    error.value = e instanceof Error ? e.message : 'Network error';
   } finally {
-    loading.value = false
+    loading.value = false;
   }
 }
 
-onMounted(loadProfiles)
+onMounted(loadProfiles);
 </script>
 
 <style scoped>
@@ -308,7 +306,9 @@ onMounted(loadProfiles)
   border-radius: var(--radius-sm);
   color: var(--text-primary);
   text-align: left;
-  transition: background 0.1s, border-color 0.1s;
+  transition:
+    background 0.1s,
+    border-color 0.1s;
 }
 
 .profile-item:hover,
