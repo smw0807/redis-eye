@@ -3,8 +3,8 @@
 
 const { start } = require('../server/index');
 
-const START_PORT = 3000;
-const MAX_PORT = 3010;
+const START_PORT = 7379;
+const MAX_PORT = 7389;
 
 async function findPort(from) {
   for (let port = from; port <= MAX_PORT; port++) {
