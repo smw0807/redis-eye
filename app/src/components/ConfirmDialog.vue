@@ -6,7 +6,7 @@
         <p class="confirm-message">{{ message }}</p>
         <div class="confirm-actions">
           <button class="btn btn-secondary" @click="emit('cancel')">
-            {{ cancelText ?? '취소' }}
+            {{ cancelText ?? 'Cancel' }}
           </button>
           <button
             ref="confirmBtnRef"
@@ -14,7 +14,7 @@
             :class="type === 'danger' ? 'btn-danger' : 'btn-primary'"
             @click="emit('confirm')"
           >
-            {{ confirmText ?? '확인' }}
+            {{ confirmText ?? 'Confirm' }}
           </button>
         </div>
       </div>

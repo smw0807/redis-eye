@@ -21,7 +21,7 @@
           <template v-if="!editingKeyName">
             <div class="key-name-group">
               <div class="detail-key-name mono" :title="detail.key">{{ detail.key }}</div>
-              <button class="btn-icon" title="키 이름 변경" @click="startEditKeyName">✎</button>
+              <button class="btn-icon" title="Rename key" @click="startEditKeyName">✎</button>
             </div>
           </template>
           <template v-else>
@@ -47,7 +47,7 @@
             <span
               class="ttl-badge"
               :class="{ expired: detail.ttl === -2, 'ttl-editable': detail.ttl !== -2 }"
-              :title="detail.ttl !== -2 ? 'TTL 수정' : undefined"
+              :title="detail.ttl !== -2 ? 'Edit TTL' : undefined"
               @click="detail.ttl !== -2 && startEditTtl()"
             >
               {{ formatTtl(detail.ttl) }}
@@ -60,7 +60,7 @@
                 v-model="pendingTtl"
                 type="number"
                 min="1"
-                placeholder="초(seconds)"
+                placeholder="seconds"
                 class="inline-input ttl-input"
                 @keydown.enter="saveTtl"
                 @keydown.esc="cancelEditTtl"
@@ -259,7 +259,7 @@
                   </button>
                   <button
                     class="btn btn-secondary btn-xs icon-btn"
-                    title="위로 이동"
+                    title="Move up"
                     :disabled="idx === 0 || listInfo.truncated"
                     @click="moveListItem(idx, idx - 1)"
                   >
@@ -267,7 +267,7 @@
                   </button>
                   <button
                     class="btn btn-secondary btn-xs icon-btn"
-                    title="아래로 이동"
+                    title="Move down"
                     :disabled="idx === listInfo.items.length - 1 || listInfo.truncated"
                     @click="moveListItem(idx, idx + 1)"
                   >
@@ -442,9 +442,9 @@ async function fetchDetail(key: string) {
 async function deleteKey() {
   if (!detail.value) return;
   const ok = await openConfirm({
-    title: '키 삭제',
-    message: `"${detail.value.key}" 키를 삭제하시겠습니까?`,
-    confirmText: '삭제',
+    title: 'Delete Key',
+    message: `Are you sure you want to delete "${detail.value.key}"?`,
+    confirmText: 'Delete',
     type: 'danger',
   });
   if (!ok) return;
@@ -481,9 +481,9 @@ async function saveKeyName() {
   }
 
   const ok = await openConfirm({
-    title: '키 이름 변경',
-    message: `"${detail.value.key}" → "${newKey}"으로 변경하시겠습니까?`,
-    confirmText: '변경',
+    title: 'Rename Key',
+    message: `Rename "${detail.value.key}" to "${newKey}"?`,
+    confirmText: 'Rename',
     type: 'primary',
   });
   if (!ok) return;
@@ -530,14 +530,14 @@ async function saveTtl() {
   if (!detail.value) return;
   const seconds = Number(pendingTtl.value);
   if (!pendingTtl.value || isNaN(seconds) || seconds <= 0) {
-    saveError.value = 'TTL은 1 이상의 숫자(초)를 입력하세요';
+    saveError.value = 'TTL must be a positive number (seconds)';
     return;
   }
 
   const ok = await openConfirm({
-    title: 'TTL 수정',
-    message: `TTL을 ${seconds}초로 변경하시겠습니까?`,
-    confirmText: '변경',
+    title: 'Update TTL',
+    message: `Set TTL to ${seconds} seconds?`,
+    confirmText: 'Update',
     type: 'primary',
   });
   if (!ok) return;
@@ -552,13 +552,13 @@ async function saveTtl() {
     });
     const data = await res.json();
     if (!res.ok) {
-      saveError.value = data.error || 'TTL 업데이트 실패';
+      saveError.value = data.error || 'Failed to update TTL';
     } else {
       editingTtl.value = false;
       await fetchDetail(detail.value.key);
     }
   } catch (e: unknown) {
-    saveError.value = e instanceof Error ? e.message : 'TTL 업데이트 실패';
+    saveError.value = e instanceof Error ? e.message : 'Failed to update TTL';
   } finally {
     saving.value = false;
   }
@@ -567,9 +567,9 @@ async function saveTtl() {
 async function persistTtl() {
   if (!detail.value) return;
   const ok = await openConfirm({
-    title: 'TTL 제거',
-    message: 'TTL을 제거하고 영구 키로 설정하시겠습니까?',
-    confirmText: '영구화',
+    title: 'Persist Key',
+    message: 'Remove TTL and make this key permanent?',
+    confirmText: 'Persist',
     type: 'primary',
   });
   if (!ok) return;
@@ -584,13 +584,13 @@ async function persistTtl() {
     });
     const data = await res.json();
     if (!res.ok) {
-      saveError.value = data.error || 'Persist 실패';
+      saveError.value = data.error || 'Failed to persist';
     } else {
       editingTtl.value = false;
       await fetchDetail(detail.value.key);
     }
   } catch (e: unknown) {
-    saveError.value = e instanceof Error ? e.message : 'Persist 실패';
+    saveError.value = e instanceof Error ? e.message : 'Failed to persist';
   } finally {
     saving.value = false;
   }
@@ -620,9 +620,9 @@ function formatJsonInEditor() {
 async function saveStringValue() {
   if (!detail.value) return;
   const ok = await openConfirm({
-    title: '값 수정',
-    message: '문자열 값을 저장하시겠습니까?',
-    confirmText: '저장',
+    title: 'Save Value',
+    message: 'Save the updated string value?',
+    confirmText: 'Save',
     type: 'primary',
   });
   if (!ok) return;
@@ -637,13 +637,13 @@ async function saveStringValue() {
     });
     const data = await res.json();
     if (!res.ok) {
-      saveError.value = data.error || '저장 실패';
+      saveError.value = data.error || 'Failed to save';
     } else {
       editingString.value = false;
       await fetchDetail(detail.value.key);
     }
   } catch (e: unknown) {
-    saveError.value = e instanceof Error ? e.message : '저장 실패';
+    saveError.value = e instanceof Error ? e.message : 'Failed to save';
   } finally {
     saving.value = false;
   }
@@ -665,9 +665,9 @@ function cancelEditHashField() {
 async function saveHashField(field: string) {
   if (!detail.value) return;
   const ok = await openConfirm({
-    title: '필드 수정',
-    message: `"${field}" 필드 값을 저장하시겠습니까?`,
-    confirmText: '저장',
+    title: 'Save Field',
+    message: `Save the updated value for field "${field}"?`,
+    confirmText: 'Save',
     type: 'primary',
   });
   if (!ok) return;
@@ -682,14 +682,14 @@ async function saveHashField(field: string) {
     });
     const data = await res.json();
     if (!res.ok) {
-      saveError.value = data.error || '저장 실패';
+      saveError.value = data.error || 'Failed to save';
     } else {
       editingHashField.value = null;
       // Update local state
       (detail.value.value as Record<string, string>)[field] = pendingHashValue.value;
     }
   } catch (e: unknown) {
-    saveError.value = e instanceof Error ? e.message : '저장 실패';
+    saveError.value = e instanceof Error ? e.message : 'Failed to save';
   } finally {
     saving.value = false;
   }
@@ -698,9 +698,9 @@ async function saveHashField(field: string) {
 async function deleteHashField(field: string) {
   if (!detail.value) return;
   const ok = await openConfirm({
-    title: '필드 삭제',
-    message: `"${field}" 필드를 삭제하시겠습니까?`,
-    confirmText: '삭제',
+    title: 'Delete Field',
+    message: `Are you sure you want to delete the field "${field}"?`,
+    confirmText: 'Delete',
     type: 'danger',
   });
   if (!ok) return;
@@ -714,13 +714,13 @@ async function deleteHashField(field: string) {
     });
     const data = await res.json();
     if (!res.ok) {
-      saveError.value = data.error || '삭제 실패';
+      saveError.value = data.error || 'Failed to delete';
     } else {
       // Update local state
       delete (detail.value.value as Record<string, string>)[field];
     }
   } catch (e: unknown) {
-    saveError.value = e instanceof Error ? e.message : '삭제 실패';
+    saveError.value = e instanceof Error ? e.message : 'Failed to delete';
   } finally {
     saving.value = false;
   }
@@ -741,7 +741,7 @@ async function submitAddHashField() {
   if (!detail.value) return;
   const field = newHashFieldName.value.trim();
   if (!field) {
-    saveError.value = '필드 이름을 입력하세요';
+    saveError.value = 'Field name is required';
     return;
   }
 
@@ -755,13 +755,13 @@ async function submitAddHashField() {
     });
     const data = await res.json();
     if (!res.ok) {
-      saveError.value = data.error || '추가 실패';
+      saveError.value = data.error || 'Failed to add';
     } else {
       (detail.value.value as Record<string, string>)[field] = newHashFieldValue.value;
       addingHashField.value = false;
     }
   } catch (e: unknown) {
-    saveError.value = e instanceof Error ? e.message : '추가 실패';
+    saveError.value = e instanceof Error ? e.message : 'Failed to add';
   } finally {
     saving.value = false;
   }
@@ -783,9 +783,9 @@ function cancelEditListItem() {
 async function saveListItem(index: number) {
   if (!detail.value) return;
   const ok = await openConfirm({
-    title: '아이템 수정',
-    message: `인덱스 ${index}의 값을 저장하시겠습니까?`,
-    confirmText: '저장',
+    title: 'Save Item',
+    message: `Save the updated value at index ${index}?`,
+    confirmText: 'Save',
     type: 'primary',
   });
   if (!ok) return;
@@ -800,7 +800,7 @@ async function saveListItem(index: number) {
     });
     const data = await res.json();
     if (!res.ok) {
-      saveError.value = data.error || '저장 실패';
+      saveError.value = data.error || 'Failed to save';
     } else {
       editingListIndex.value = null;
       // Update local state
@@ -812,7 +812,7 @@ async function saveListItem(index: number) {
       }
     }
   } catch (e: unknown) {
-    saveError.value = e instanceof Error ? e.message : '저장 실패';
+    saveError.value = e instanceof Error ? e.message : 'Failed to save';
   } finally {
     saving.value = false;
   }
@@ -830,7 +830,7 @@ async function moveListItem(from: number, to: number) {
     });
     const data = await res.json();
     if (!res.ok) {
-      saveError.value = data.error || '이동 실패';
+      saveError.value = data.error || 'Failed to move';
     } else {
       // Update local state
       const v = detail.value.value;
@@ -839,7 +839,7 @@ async function moveListItem(from: number, to: number) {
       items.splice(to, 0, item);
     }
   } catch (e: unknown) {
-    saveError.value = e instanceof Error ? e.message : '이동 실패';
+    saveError.value = e instanceof Error ? e.message : 'Failed to move';
   } finally {
     saving.value = false;
   }
