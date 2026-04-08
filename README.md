@@ -31,18 +31,22 @@ A browser window opens automatically at `http://127.0.0.1:<port>`.
 
 redis-eye launches a local web GUI for Redis. Connect to any Redis instance, browse your keys, and edit data — all from the browser, with zero configuration.
 
-![screenshot placeholder](https://raw.githubusercontent.com/your-username/redis-eye/main/docs/screenshot.png)
+![screenshot placeholder](https://github.com/smw0807/redis-eye/blob/main/imgs/main-page.png?raw=true)
+![screenshot placeholder](https://github.com/smw0807/redis-eye/blob/main/imgs/dashboard.png?raw=true)
+![screenshot placeholder](https://github.com/smw0807/redis-eye/blob/main/imgs/add-key.png?raw=true)
 
 ---
 
 ## Features
 
 ### Connection
+
 - Connect to any Redis server (host, port, password, DB index)
 - Save and manage named connection profiles (stored locally)
 - Auto-reconnect detection with navigation guard
 
 ### Key Browser
+
 - SCAN-based key listing (never uses `KEYS` — safe for production)
 - Infinite scroll with lazy loading
 - Search by glob pattern (e.g. `user:*`, `session:??:*`)
@@ -52,15 +56,17 @@ redis-eye launches a local web GUI for Redis. Connect to any Redis instance, bro
 - Real-time TTL countdown with color-coded urgency badges
 
 ### Data Viewer & Editor
-| Type | View | Edit |
-|------|------|------|
-| String | Raw value, JSON pretty-print with expand/collapse | Inline textarea, Format JSON button |
-| Hash | Field/value table | Add, edit, delete individual fields |
-| List | Indexed table | Edit items, reorder with move up/down |
-| Set | Tag cloud | — |
-| ZSet | Score/member table | — |
+
+| Type   | View                                              | Edit                                  |
+| ------ | ------------------------------------------------- | ------------------------------------- |
+| String | Raw value, JSON pretty-print with expand/collapse | Inline textarea, Format JSON button   |
+| Hash   | Field/value table                                 | Add, edit, delete individual fields   |
+| List   | Indexed table                                     | Edit items, reorder with move up/down |
+| Set    | Tag cloud                                         | —                                     |
+| ZSet   | Score/member table                                | —                                     |
 
 ### Key Management
+
 - Create keys for all 5 types with type-specific forms
 - Rename keys inline (RENAME command)
 - Delete single key with confirmation dialog
@@ -68,6 +74,7 @@ redis-eye launches a local web GUI for Redis. Connect to any Redis instance, bro
 - Edit TTL (extend, set, or make permanent)
 
 ### Database & Server Info
+
 - Switch between DB 0–15 with key count preview per database
 - Live server info: Redis version, memory usage, connected clients, role, uptime
 
@@ -82,12 +89,12 @@ redis-eye launches a local web GUI for Redis. Connect to any Redis instance, bro
 
 ## Connection Defaults
 
-| Field    | Default     |
-|----------|-------------|
-| Host     | 127.0.0.1   |
-| Port     | 6379        |
-| Password | (none)      |
-| DB       | 0           |
+| Field    | Default   |
+| -------- | --------- |
+| Host     | 127.0.0.1 |
+| Port     | 6379      |
+| Password | (none)    |
+| DB       | 0         |
 
 ---
 
@@ -121,9 +128,9 @@ The server binds **only** to `127.0.0.1` — it is never exposed to external net
 redis-eye [--port <number>]
 ```
 
-| Option | Description | Default |
-|--------|-------------|---------|
-| `--port` | Override the starting port for auto-detection | `7379` |
+| Option   | Description                                   | Default |
+| -------- | --------------------------------------------- | ------- |
+| `--port` | Override the starting port for auto-detection | `7379`  |
 
 ---
 
