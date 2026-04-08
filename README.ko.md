@@ -2,7 +2,7 @@
 
 > `npx` 명령 한 줄로 Redis 데이터를 시각적으로 탐색·관리하는 경량 웹 GUI
 
-**[English README](./README.md)**
+**[English README](https://github.com/smw0807/redis-eye/blob/main/README.md)**
 
 ---
 
@@ -14,12 +14,14 @@
 npx redis-eye
 ```
 
-전역 설치 후 실행:
+전역 설치 후 실행 (반복 사용 시 권장):
 
 ```bash
 npm install -g redis-eye
 redis-eye
 ```
+
+> **주의:** `npm install redis-eye` (`-g` 없이)는 로컬에만 설치되며 `redis-eye` 명령어를 PATH에 추가하지 않습니다. `npx` 또는 `-g` 옵션으로 설치하세요.
 
 실행하면 `http://127.0.0.1:<포트>` 주소로 브라우저가 자동으로 열립니다.
 
@@ -129,4 +131,4 @@ MIT
 
 ---
 
-**[English README →](./README.md)**
+**[English README →](https://github.com/smw0807/redis-eye/blob/main/README.md)**

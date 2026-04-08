@@ -2,24 +2,26 @@
 
 > Lightweight Redis GUI — explore and manage your Redis data with a single `npx` command.
 
-**[한국어 문서 보기](./README.ko.md)**
+**[한국어 문서 보기](https://github.com/smw0807/redis-eye/blob/main/README.ko.md)**
 
 ---
 
 ## Quick Start
 
-No installation required:
+No installation required — run directly with npx:
 
 ```bash
 npx redis-eye
 ```
 
-Or install globally:
+Or install globally (recommended for repeated use):
 
 ```bash
 npm install -g redis-eye
 redis-eye
 ```
+
+> **Note:** `npm install redis-eye` (without `-g`) installs locally and does not add `redis-eye` to your PATH. Use `npx` or install with `-g`.
 
 A browser window opens automatically at `http://127.0.0.1:<port>`.
 
@@ -131,4 +133,4 @@ MIT
 
 ---
 
-**[한국어 문서 보기 →](./README.ko.md)**
+**[한국어 문서 보기 →](https://github.com/smw0807/redis-eye/blob/main/README.ko.md)**
