@@ -10,19 +10,25 @@
       <div v-if="profiles.length > 0" class="form-group">
         <label class="form-label">Saved Profiles</label>
         <div class="profile-list">
-          <button
+          <div
             v-for="p in profiles"
             :key="p.name"
             class="profile-item"
             :class="{ active: selectedProfile === p.name }"
-            @click="loadProfile(p)"
           >
-            <span class="profile-name">{{ p.name }}</span>
-            <span class="profile-addr">{{ p.host }}:{{ p.port }}</span>
-            <button class="profile-delete" title="Delete" @click.stop="deleteProfile(p.name)">
+            <button type="button" class="profile-select" @click="loadProfile(p)">
+              <span class="profile-name">{{ p.name }}</span>
+              <span class="profile-addr">{{ p.host }}:{{ p.port }}</span>
+            </button>
+            <button
+              type="button"
+              class="profile-delete"
+              title="Delete"
+              @click="deleteProfile(p.name)"
+            >
               ×
             </button>
-          </button>
+          </div>
         </div>
       </div>
 
@@ -312,12 +318,9 @@ onMounted(loadProfiles);
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 8px 10px;
   background: var(--bg-elevated);
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
-  color: var(--text-primary);
-  text-align: left;
   transition:
     background 0.1s,
     border-color 0.1s;
@@ -327,6 +330,19 @@ onMounted(loadProfiles);
 .profile-item.active {
   background: var(--bg-hover);
   border-color: var(--accent);
+}
+
+.profile-select {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  background: none;
+  border: none;
+  color: var(--text-primary);
+  text-align: left;
+  cursor: pointer;
 }
 
 .profile-name {
@@ -346,7 +362,7 @@ onMounted(loadProfiles);
   color: var(--text-muted);
   font-size: 16px;
   line-height: 1;
-  padding: 0 2px;
+  padding: 8px 10px 8px 2px;
   cursor: pointer;
   transition: color 0.1s;
 }
