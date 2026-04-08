@@ -8,6 +8,7 @@ const keysRoute = require('./routes/keys');
 const keyRoute = require('./routes/key');
 const dbRoute = require('./routes/db');
 const infoRoute = require('./routes/info');
+const pubsubRoute = require('./routes/pubsub');
 
 const app = express();
 app.use(express.json());
@@ -18,6 +19,7 @@ app.use('/api', keysRoute);
 app.use('/api', keyRoute);
 app.use('/api', dbRoute);
 app.use('/api', infoRoute);
+app.use('/api', pubsubRoute);
 
 // Serve built frontend
 const distDir = path.join(__dirname, '..', 'dist');

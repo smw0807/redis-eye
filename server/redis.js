@@ -13,7 +13,7 @@ async function connect({ host = '127.0.0.1', port = 6379, password, db = 0, tls 
   if (client) {
     await disconnect();
   }
-  connOptions = { host, port: Number(port), db: Number(db) };
+  connOptions = { host, port: Number(port), db: Number(db), password: password || null, tls: !!tls };
 
   const options = {
     host,

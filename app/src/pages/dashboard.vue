@@ -34,6 +34,13 @@
         <button v-if="!readOnly" class="btn btn-primary add-key-btn" @click="showAddModal = true">+ Add Key</button>
         <button
           class="btn btn-secondary icon-btn"
+          title="Pub/Sub Monitor"
+          @click="router.push('/pubsub')"
+        >
+          📡
+        </button>
+        <button
+          class="btn btn-secondary icon-btn"
           title="Refresh key list"
           @click="keyListRef?.refresh()"
         >

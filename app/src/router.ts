@@ -1,12 +1,14 @@
 import { createRouter, createWebHistory } from 'vue-router';
 import IndexPage from './pages/index.vue';
 import DashboardPage from './pages/dashboard.vue';
+import PubSubPage from './pages/pubsub.vue';
 
 const router = createRouter({
   history: createWebHistory(),
   routes: [
     { path: '/', component: IndexPage },
     { path: '/dashboard', component: DashboardPage },
+    { path: '/pubsub', component: PubSubPage },
   ],
 });
 
