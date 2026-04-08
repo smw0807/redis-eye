@@ -21,7 +21,7 @@
           <template v-if="!editingKeyName">
             <div class="key-name-group">
               <div class="detail-key-name mono" :title="detail.key">{{ detail.key }}</div>
-              <button class="btn-icon" title="Rename key" @click="startEditKeyName">✎</button>
+              <button v-if="!props.readOnly" class="btn-icon" title="Rename key" @click="startEditKeyName">✎</button>
             </div>
           </template>
           <template v-else>
@@ -46,9 +46,9 @@
           <template v-if="!editingTtl">
             <span
               class="ttl-badge"
-              :class="{ expired: detail.ttl === -2, 'ttl-editable': detail.ttl !== -2 }"
-              :title="detail.ttl !== -2 ? 'Edit TTL' : undefined"
-              @click="detail.ttl !== -2 && startEditTtl()"
+              :class="{ expired: detail.ttl === -2, 'ttl-editable': detail.ttl !== -2 && !props.readOnly }"
+              :title="detail.ttl !== -2 && !props.readOnly ? 'Edit TTL' : undefined"
+              @click="detail.ttl !== -2 && !props.readOnly && startEditTtl()"
             >
               {{ formatTtl(detail.ttl) }}
             </span>
@@ -75,7 +75,7 @@
             </div>
           </template>
 
-          <button class="btn btn-danger btn-sm" @click="deleteKey">Delete</button>
+          <button v-if="!props.readOnly" class="btn btn-danger btn-sm" @click="deleteKey">Delete</button>
         </div>
 
         <div v-if="saveError" class="save-error">{{ saveError }}</div>
@@ -94,7 +94,7 @@
               >
                 {{ jsonExpanded ? '▼ Collapse JSON' : '▶ Expand JSON' }}
               </button>
-              <button class="btn btn-secondary btn-xs" @click="startEditString">Edit</button>
+              <button v-if="!props.readOnly" class="btn btn-secondary btn-xs" @click="startEditString">Edit</button>
             </div>
           </div>
           <pre class="value-pre">{{ detail.value }}</pre>
@@ -128,14 +128,14 @@
       <div v-else-if="detail.type === 'hash'" class="value-section">
         <div class="section-header">
           <div class="section-label">{{ Object.keys(hashValue).length }} fields</div>
-          <button class="btn btn-secondary btn-xs" @click="startAddHashField">+ Add Field</button>
+          <button v-if="!props.readOnly" class="btn btn-secondary btn-xs" @click="startAddHashField">+ Add Field</button>
         </div>
         <table class="kv-table">
           <thead>
             <tr>
               <th>Field</th>
               <th>Value</th>
-              <th class="th-actions">Actions</th>
+              <th v-if="!props.readOnly" class="th-actions">Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -165,7 +165,7 @@
                     Cancel
                   </button>
                 </template>
-                <template v-else>
+                <template v-else-if="!props.readOnly">
                   <button
                     class="btn btn-secondary btn-xs"
                     @click="startEditHashField(String(k), String(v))"
@@ -223,7 +223,7 @@
             <tr>
               <th class="th-idx">#</th>
               <th>Value</th>
-              <th class="th-actions">Actions</th>
+              <th v-if="!props.readOnly" class="th-actions">Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -240,7 +240,7 @@
                 </template>
                 <template v-else>{{ item }}</template>
               </td>
-              <td class="cell-actions">
+              <td v-if="!props.readOnly" class="cell-actions">
                 <template v-if="editingListIndex === idx">
                   <button
                     class="btn btn-primary btn-xs"
@@ -338,7 +338,7 @@ interface KeyDetail {
   value: unknown;
 }
 
-const props = defineProps<{ keyName: string | null }>();
+const props = defineProps<{ keyName: string | null; readOnly?: boolean }>();
 const emit = defineEmits<{
   (e: 'deleted', key: string): void;
   (e: 'renamed', oldKey: string, newKey: string): void;

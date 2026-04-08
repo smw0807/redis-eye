@@ -88,6 +88,10 @@
             <input id="tls" v-model="form.tls" type="checkbox" />
             <span>TLS / SSL</span>
           </label>
+          <label class="tls-label readonly-label">
+            <input id="readonly" v-model="form.readOnly" type="checkbox" />
+            <span>Read Only</span>
+          </label>
         </div>
 
         <div v-if="error" class="error-box">{{ error }}</div>
@@ -143,6 +147,7 @@ const form = reactive({
   password: '',
   db: 0,
   tls: false,
+  readOnly: false,
 });
 
 const profiles = ref<Profile[]>([]);
@@ -216,6 +221,7 @@ async function handleConnect() {
     const data = await res.json();
 
     if (data.ok) {
+      sessionStorage.setItem('redis-eye-readonly', form.readOnly ? '1' : '0');
       router.push('/dashboard');
     } else {
       error.value = data.error || 'Connection failed';
@@ -373,6 +379,9 @@ onMounted(loadProfiles);
 
 .tls-group {
   margin-top: -4px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 }
 
 .tls-label {
@@ -390,5 +399,9 @@ onMounted(loadProfiles);
   height: 15px;
   accent-color: var(--accent);
   cursor: pointer;
+}
+
+.readonly-label {
+  color: var(--warning);
 }
 </style>

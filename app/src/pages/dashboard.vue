@@ -11,6 +11,7 @@
           <span class="conn-dot" />
           <span class="conn-addr mono">{{ connAddr }}</span>
           <span class="conn-db">DB {{ currentDb }}</span>
+          <span v-if="readOnly" class="readonly-badge">READ ONLY</span>
         </div>
         <div class="sidebar-actions">
           <div class="db-row">
@@ -30,7 +31,7 @@
       </div>
 
       <div class="key-list-toolbar">
-        <button class="btn btn-primary add-key-btn" @click="showAddModal = true">+ Add Key</button>
+        <button v-if="!readOnly" class="btn btn-primary add-key-btn" @click="showAddModal = true">+ Add Key</button>
         <button
           class="btn btn-secondary icon-btn"
           title="Refresh key list"
@@ -40,7 +41,7 @@
         </button>
       </div>
 
-      <KeyList ref="keyListRef" :selected-key="selectedKey" @select="selectKey" @bulk-deleted="onBulkDeleted" />
+      <KeyList ref="keyListRef" :selected-key="selectedKey" :read-only="readOnly" @select="selectKey" @bulk-deleted="onBulkDeleted" />
     </aside>
 
     <!-- Main content -->
@@ -56,7 +57,7 @@
         <span class="info-item" :class="info.role">{{ info.role }}</span>
       </div>
 
-      <KeyDetail :key-name="selectedKey" @deleted="onKeyDeleted" @renamed="onKeyRenamed" />
+      <KeyDetail :key-name="selectedKey" :read-only="readOnly" @deleted="onKeyDeleted" @renamed="onKeyRenamed" />
     </main>
   </div>
 
@@ -90,6 +91,7 @@ const info = ref<RedisInfo | null>(null);
 const connAddr = ref('');
 const keyListRef = ref<InstanceType<typeof KeyList> | null>(null);
 const showAddModal = ref(false);
+const readOnly = ref(false);
 
 async function fetchInfo() {
   try {
@@ -132,6 +134,7 @@ async function switchDb(event: Event) {
 
 async function disconnect() {
   await fetch('/api/disconnect', { method: 'DELETE' });
+  sessionStorage.removeItem('redis-eye-readonly');
   router.push('/');
 }
 
@@ -164,9 +167,9 @@ function onKeyCreated(key: string) {
 }
 
 onMounted(async () => {
+  readOnly.value = sessionStorage.getItem('redis-eye-readonly') === '1';
   await Promise.all([fetchInfo(), fetchDbs()]);
 
-  // Try to get connection address from info
   if (info.value) {
     connAddr.value = 'connected';
   }
@@ -239,6 +242,18 @@ onMounted(async () => {
 .conn-db {
   color: var(--text-muted);
   font-size: 11px;
+}
+
+.readonly-badge {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: var(--warning);
+  background: color-mix(in srgb, var(--warning) 15%, transparent);
+  border: 1px solid color-mix(in srgb, var(--warning) 50%, transparent);
+  border-radius: 20px;
+  padding: 1px 7px;
+  flex-shrink: 0;
 }
 
 .sidebar-actions {

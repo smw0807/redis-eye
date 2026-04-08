@@ -66,7 +66,7 @@
             Load more
           </button>
           <button
-            v-if="filteredItems.length > 0"
+            v-if="filteredItems.length > 0 && !readOnly"
             class="btn btn-secondary select-btn"
             @click="enterSelectionMode"
           >
@@ -180,7 +180,7 @@ const HISTORY_KEY = 'redis-eye-search-history';
 const MAX_HISTORY = 8;
 const EXPIRING_THRESHOLD_MS = 5 * 60 * 1000; // 5 minutes
 
-defineProps<{ selectedKey: string | null }>();
+defineProps<{ selectedKey: string | null; readOnly?: boolean }>();
 const emit = defineEmits<{
   (e: 'select', key: string): void;
   (e: 'bulkDeleted', keys: string[]): void;
