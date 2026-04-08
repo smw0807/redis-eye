@@ -57,6 +57,18 @@
         <span class="info-item" :class="info.role">{{ info.role }}</span>
       </div>
 
+      <!-- Connection status banner -->
+      <div v-if="connStatus !== 'connected'" class="conn-status-banner" :class="connStatus">
+        <template v-if="connStatus === 'reconnecting'">
+          <span class="conn-status-spinner" />
+          <span>Redis 연결이 끊어졌습니다. 재연결 시도 중…</span>
+        </template>
+        <template v-else-if="connStatus === 'reconnected'">
+          <span class="conn-status-icon">✓</span>
+          <span>Redis에 재연결되었습니다.</span>
+        </template>
+      </div>
+
       <KeyDetail :key-name="selectedKey" :read-only="readOnly" @deleted="onKeyDeleted" @renamed="onKeyRenamed" />
     </main>
   </div>
@@ -65,7 +77,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, onUnmounted } from 'vue';
 import { useRouter } from 'vue-router';
 import KeyList from '../components/KeyList.vue';
 import KeyDetail from '../components/KeyDetail.vue';
@@ -92,6 +104,33 @@ const connAddr = ref('');
 const keyListRef = ref<InstanceType<typeof KeyList> | null>(null);
 const showAddModal = ref(false);
 const readOnly = ref(false);
+const connStatus = ref<'connected' | 'reconnecting' | 'reconnected'>('connected');
+let reconnectedTimer: ReturnType<typeof setTimeout> | null = null;
+let statusPoller: ReturnType<typeof setInterval> | null = null;
+
+async function pollStatus() {
+  try {
+    const res = await fetch('/api/status');
+    const data = await res.json();
+    if (data.connected) {
+      if (connStatus.value === 'reconnecting') {
+        connStatus.value = 'reconnected';
+        if (reconnectedTimer) clearTimeout(reconnectedTimer);
+        reconnectedTimer = setTimeout(() => {
+          connStatus.value = 'connected';
+        }, 3000);
+      }
+      if (data.host && !connAddr.value) {
+        connAddr.value = `${data.host}:${data.port}`;
+      }
+    } else {
+      if (reconnectedTimer) clearTimeout(reconnectedTimer);
+      connStatus.value = 'reconnecting';
+    }
+  } catch {
+    connStatus.value = 'reconnecting';
+  }
+}
 
 async function fetchInfo() {
   try {
@@ -170,9 +209,19 @@ onMounted(async () => {
   readOnly.value = sessionStorage.getItem('redis-eye-readonly') === '1';
   await Promise.all([fetchInfo(), fetchDbs()]);
 
-  if (info.value) {
-    connAddr.value = 'connected';
-  }
+  // Set actual host:port from status
+  try {
+    const res = await fetch('/api/status');
+    const data = await res.json();
+    if (data.host) connAddr.value = `${data.host}:${data.port}`;
+  } catch { /* ignore */ }
+
+  statusPoller = setInterval(pollStatus, 5000);
+});
+
+onUnmounted(() => {
+  if (statusPoller) clearInterval(statusPoller);
+  if (reconnectedTimer) clearTimeout(reconnectedTimer);
 });
 </script>
 
@@ -337,5 +386,45 @@ onMounted(async () => {
 .slave,
 .replica {
   color: var(--warning);
+}
+
+/* Connection status banner */
+.conn-status-banner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 16px;
+  font-size: 12px;
+  font-weight: 500;
+  border-bottom: 1px solid var(--border);
+}
+
+.conn-status-banner.reconnecting {
+  background: color-mix(in srgb, var(--warning) 12%, transparent);
+  color: var(--warning);
+  border-color: color-mix(in srgb, var(--warning) 30%, transparent);
+}
+
+.conn-status-banner.reconnected {
+  background: color-mix(in srgb, var(--success) 12%, transparent);
+  color: var(--success);
+  border-color: color-mix(in srgb, var(--success) 30%, transparent);
+}
+
+.conn-status-spinner {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border: 2px solid currentColor;
+  border-top-color: transparent;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+  flex-shrink: 0;
+}
+
+.conn-status-icon {
+  font-size: 13px;
+  font-weight: 700;
+  flex-shrink: 0;
 }
 </style>

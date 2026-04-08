@@ -79,6 +79,7 @@ redis-eye launches a local web GUI for Redis. Connect to any Redis instance, bro
 
 - Switch between DB 0–15 with key count preview per database
 - Live server info: Redis version, memory usage, connected clients, role, uptime
+- Connection status monitoring — polls every 5 s; shows a **Reconnecting** banner when the connection is lost and a **Reconnected** confirmation when it recovers
 
 ---
 

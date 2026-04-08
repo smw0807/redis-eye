@@ -3,6 +3,7 @@
 const Redis = require('ioredis');
 
 let client = null;
+let connOptions = null;
 
 /**
  * Connect to Redis with given options.
@@ -12,6 +13,7 @@ async function connect({ host = '127.0.0.1', port = 6379, password, db = 0, tls 
   if (client) {
     await disconnect();
   }
+  connOptions = { host, port: Number(port), db: Number(db) };
 
   const options = {
     host,
@@ -48,6 +50,7 @@ async function disconnect() {
       client.disconnect();
     }
     client = null;
+    connOptions = null;
   }
 }
 
@@ -59,4 +62,8 @@ function isConnected() {
   return client !== null && client.status === 'ready';
 }
 
-module.exports = { connect, disconnect, getClient, isConnected };
+function getConnOptions() {
+  return connOptions;
+}
+
+module.exports = { connect, disconnect, getClient, isConnected, getConnOptions };

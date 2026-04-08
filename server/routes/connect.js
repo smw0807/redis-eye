@@ -1,7 +1,7 @@
 'use strict';
 
 const { Router } = require('express');
-const { connect, disconnect, isConnected } = require('../redis');
+const { connect, disconnect, isConnected, getConnOptions } = require('../redis');
 
 const router = Router();
 
@@ -29,7 +29,13 @@ router.delete('/disconnect', async (_req, res) => {
 
 // GET /api/status
 router.get('/status', (_req, res) => {
-  res.json({ connected: isConnected() });
+  const opts = getConnOptions();
+  res.json({
+    connected: isConnected(),
+    host: opts?.host ?? null,
+    port: opts?.port ?? null,
+    db: opts?.db ?? null,
+  });
 });
 
 module.exports = router;
