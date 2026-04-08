@@ -77,6 +77,13 @@
           />
         </div>
 
+        <div class="form-group tls-group">
+          <label class="tls-label">
+            <input id="tls" v-model="form.tls" type="checkbox" />
+            <span>TLS / SSL</span>
+          </label>
+        </div>
+
         <div v-if="error" class="error-box">{{ error }}</div>
 
         <div class="form-actions">
@@ -115,6 +122,7 @@ interface Profile {
   port: number;
   db: number;
   password?: string;
+  tls?: boolean;
 }
 
 const router = useRouter();
@@ -128,6 +136,7 @@ const form = reactive({
   port: 6379,
   password: '',
   db: 0,
+  tls: false,
 });
 
 const profiles = ref<Profile[]>([]);
@@ -154,6 +163,7 @@ function saveProfile() {
     port: form.port || 6379,
     db: form.db || 0,
     password: form.password || undefined,
+    tls: form.tls,
   };
 
   if (existing >= 0) {
@@ -172,6 +182,7 @@ function loadProfile(p: Profile) {
   form.port = p.port;
   form.db = p.db;
   form.password = p.password || '';
+  form.tls = p.tls ?? false;
 }
 
 function deleteProfile(name: string) {
@@ -193,6 +204,7 @@ async function handleConnect() {
         port: form.port || 6379,
         password: form.password || undefined,
         db: form.db || 0,
+        tls: form.tls,
       }),
     });
     const data = await res.json();
@@ -341,5 +353,26 @@ onMounted(loadProfiles);
 
 .profile-delete:hover {
   color: var(--danger);
+}
+
+.tls-group {
+  margin-top: -4px;
+}
+
+.tls-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  color: var(--text-secondary);
+  font-size: 13px;
+  user-select: none;
+}
+
+.tls-label input[type='checkbox'] {
+  width: 15px;
+  height: 15px;
+  accent-color: var(--accent);
+  cursor: pointer;
 }
 </style>

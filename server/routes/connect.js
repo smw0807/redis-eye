@@ -7,10 +7,10 @@ const router = Router();
 
 // POST /api/connect
 router.post('/connect', async (req, res) => {
-  const { host = '127.0.0.1', port = 6379, password, db = 0 } = req.body;
+  const { host = '127.0.0.1', port = 6379, password, db = 0, tls = false } = req.body;
 
   try {
-    await connect({ host, port, password, db });
+    await connect({ host, port, password, db, tls });
     res.json({ ok: true });
   } catch (err) {
     res.status(400).json({ ok: false, error: err.message });

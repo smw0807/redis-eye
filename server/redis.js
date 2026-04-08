@@ -8,7 +8,7 @@ let client = null;
  * Connect to Redis with given options.
  * Throws if connection fails within timeout.
  */
-async function connect({ host = '127.0.0.1', port = 6379, password, db = 0 } = {}) {
+async function connect({ host = '127.0.0.1', port = 6379, password, db = 0, tls = false } = {}) {
   if (client) {
     await disconnect();
   }
@@ -25,6 +25,10 @@ async function connect({ host = '127.0.0.1', port = 6379, password, db = 0 } = {
 
   if (password) {
     options.password = password;
+  }
+
+  if (tls) {
+    options.tls = { rejectUnauthorized: false };
   }
 
   client = new Redis(options);
