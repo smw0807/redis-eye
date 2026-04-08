@@ -1,6 +1,6 @@
 {
   "name": "redis-eye",
-  "version": "0.2.3",
+  "version": "0.2.4",
   "description": "Lightweight Redis GUI — explore your Redis data with a single npx command",
   "main": "server/index.js",
   "bin": {
@@ -32,11 +32,11 @@
   "author": "smw0807",
   "repository": {
     "type": "git",
-    "url": "https://github.com/smw0807-lgtm/redis-eye.git"
+    "url": "https://github.com/smw0807/redis-eye.git"
   },
-  "homepage": "https://github.com/smw0807-lgtm/redis-eye#readme",
+  "homepage": "https://github.com/smw0807/redis-eye#readme",
   "bugs": {
-    "url": "https://github.com/smw0807-lgtm/redis-eye/issues"
+    "url": "https://github.com/smw0807/redis-eye/issues"
   },
   "license": "MIT",
   "dependencies": {
