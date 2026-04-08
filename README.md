@@ -71,6 +71,7 @@ redis-eye launches a local web GUI for Redis. Connect to any Redis instance, bro
 - Rename keys inline (RENAME command)
 - Delete single key with confirmation dialog
 - Bulk delete — select multiple keys and delete at once
+- Bulk export — download the visible key list as **JSON** (key, type, TTL, value) or **CSV** (key, type, TTL only)
 - Edit TTL (extend, set, or make permanent)
 
 ### Database & Server Info
