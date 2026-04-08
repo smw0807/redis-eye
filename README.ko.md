@@ -31,6 +31,10 @@ redis-eye
 
 redis-eye는 로컬에서 동작하는 Redis 웹 GUI입니다. Redis 서버에 연결한 뒤 키 목록 조회, 데이터 편집, DB 전환 등을 브라우저에서 바로 할 수 있습니다. 별도 설정 파일이 필요 없습니다.
 
+![메인 페이지](https://github.com/smw0807/redis-eye/blob/main/imgs/main-page.png?raw=true)
+![대시보드](https://github.com/smw0807/redis-eye/blob/main/imgs/dashboard.png?raw=true)
+![키 추가](https://github.com/smw0807/redis-eye/blob/main/imgs/add-key.png?raw=true)
+
 ---
 
 ## 주요 기능
