@@ -72,6 +72,19 @@
           >
             Select
           </button>
+          <div v-if="filteredItems.length > 0" class="export-wrap">
+            <button
+              class="btn btn-secondary export-btn"
+              :disabled="exporting"
+              @click.stop="showExportMenu = !showExportMenu"
+            >
+              {{ exporting ? 'Exporting…' : 'Export ▾' }}
+            </button>
+            <div v-if="showExportMenu" class="export-dropdown">
+              <button class="export-option" @click="exportJson">JSON</button>
+              <button class="export-option" @click="exportCsv">CSV</button>
+            </div>
+          </div>
         </div>
       </template>
 
@@ -208,6 +221,9 @@ const selectionMode = ref(false);
 const selectedKeys = ref(new Set<string>());
 const selectAllRef = ref<HTMLInputElement | null>(null);
 
+const exporting = ref(false);
+const showExportMenu = ref(false);
+
 const selectedCount = computed(() => selectedKeys.value.size);
 const allSelected = computed(
   () => filteredItems.value.length > 0 && filteredItems.value.every((i) => selectedKeys.value.has(i.key))
@@ -281,6 +297,59 @@ function onConfirmCancel() {
   confirmState.value = null;
   confirmResolve?.(false);
   confirmResolve = null;
+}
+
+// ─── Export ───────────────────────────────────────────────────────────────────
+
+function downloadBlob(content: string, filename: string, mimeType: string) {
+  const blob = new Blob([content], { type: mimeType });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+function exportCsv() {
+  showExportMenu.value = false;
+  const ts = Date.now();
+  const rows: string[][] = [['key', 'type', 'ttl']];
+  for (const item of filteredItems.value) {
+    const ttlSec =
+      item.expireAt === -1 ? '-1' : String(Math.max(0, Math.ceil((item.expireAt - ts) / 1000)));
+    rows.push([`"${item.key.replace(/"/g, '""')}"`, item.type, ttlSec]);
+  }
+  downloadBlob(rows.map((r) => r.join(',')).join('\n'), `redis-export-${ts}.csv`, 'text/csv');
+}
+
+async function exportJson() {
+  showExportMenu.value = false;
+  exporting.value = true;
+  try {
+    const keys = filteredItems.value.map((i) => i.key);
+    const res = await fetch('/api/keys/export', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ keys }),
+    });
+    if (!res.ok) throw new Error('Export failed');
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `redis-export-${Date.now()}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  } catch (e) {
+    console.error('JSON export failed:', e);
+  } finally {
+    exporting.value = false;
+  }
 }
 
 // ─── Bulk delete ──────────────────────────────────────────────────────────────
@@ -426,17 +495,23 @@ function setupObserver() {
   observer.observe(sentinelEl.value);
 }
 
+function onDocumentClick() {
+  showExportMenu.value = false;
+}
+
 onMounted(() => {
   loadMore();
   setupObserver();
   tickInterval = setInterval(() => {
     now.value = Date.now();
   }, 1000);
+  document.addEventListener('click', onDocumentClick);
 });
 
 onUnmounted(() => {
   observer?.disconnect();
   if (tickInterval) clearInterval(tickInterval);
+  document.removeEventListener('click', onDocumentClick);
 });
 
 defineExpose({ refresh: applySearch });
@@ -614,6 +689,58 @@ defineExpose({ refresh: applySearch });
 .select-delete-btn {
   font-size: 12px;
   padding: 3px 8px;
+}
+
+.export-wrap {
+  position: relative;
+}
+
+.export-btn {
+  font-size: 12px;
+  padding: 3px 8px;
+}
+
+.export-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.export-dropdown {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 4px);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+  z-index: 100;
+  overflow: hidden;
+  min-width: 80px;
+}
+
+.export-option {
+  display: block;
+  width: 100%;
+  padding: 7px 14px;
+  background: none;
+  border: none;
+  border-bottom: 1px solid var(--border-muted);
+  color: var(--text-secondary);
+  text-align: left;
+  font-size: 12px;
+  cursor: pointer;
+  transition:
+    background 0.1s,
+    color 0.1s;
+}
+
+.export-option:last-child {
+  border-bottom: none;
+}
+
+.export-option:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
 }
 
 .select-all-label {

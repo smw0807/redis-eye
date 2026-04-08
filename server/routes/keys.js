@@ -39,6 +39,76 @@ router.get('/keys', async (req, res) => {
   }
 });
 
+// POST /api/keys/export — export keys with full values (JSON)
+router.post('/keys/export', async (req, res) => {
+  if (!isConnected()) return res.status(400).json({ error: 'Not connected' });
+
+  const { keys } = req.body;
+  if (!Array.isArray(keys) || keys.length === 0) {
+    return res.status(400).json({ error: 'keys array is required' });
+  }
+
+  const client = getClient();
+  try {
+    // Fetch type and TTL for all keys in one pipeline
+    const metaPipeline = client.pipeline();
+    for (const key of keys) {
+      metaPipeline.type(key);
+      metaPipeline.pttl(key);
+    }
+    const metaResults = await metaPipeline.exec();
+
+    const entries = keys.map((key, i) => ({
+      key,
+      type: metaResults[i * 2]?.[1] ?? 'unknown',
+      pttl: metaResults[i * 2 + 1]?.[1] ?? -1,
+    }));
+
+    // Fetch values concurrently
+    const exportData = await Promise.all(
+      entries.map(async ({ key, type, pttl }) => {
+        const ttl = pttl < 0 ? -1 : Math.ceil(pttl / 1000);
+        let value;
+        switch (type) {
+          case 'string':
+            value = await client.get(key);
+            break;
+          case 'hash':
+            value = await client.hgetall(key);
+            break;
+          case 'list':
+            value = await client.lrange(key, 0, 499);
+            break;
+          case 'set': {
+            const [, members] = await client.sscan(key, '0', 'COUNT', 500);
+            value = members;
+            break;
+          }
+          case 'zset': {
+            const raw = await client.zrange(key, 0, 499, 'WITHSCORES');
+            const items = [];
+            for (let j = 0; j < raw.length; j += 2) {
+              items.push({ member: raw[j], score: Number(raw[j + 1]) });
+            }
+            value = items;
+            break;
+          }
+          default:
+            value = null;
+        }
+        return { key, type, ttl, value };
+      })
+    );
+
+    const filename = `redis-export-${Date.now()}.json`;
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.setHeader('Content-Type', 'application/json');
+    res.json(exportData);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // DELETE /api/keys — bulk delete multiple keys
 router.delete('/keys', async (req, res) => {
   if (!isConnected()) return res.status(400).json({ error: 'Not connected' });
