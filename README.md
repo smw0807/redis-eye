@@ -81,6 +81,14 @@ redis-eye launches a local web GUI for Redis. Connect to any Redis instance, bro
 - Live server info: Redis version, memory usage, connected clients, role, uptime
 - Connection status monitoring — polls every 5 s; shows a **Reconnecting** banner when the connection is lost and a **Reconnected** confirmation when it recovers
 
+### Pub/Sub Monitor
+
+- Open from the 📡 button in the dashboard sidebar (`/pubsub` route)
+- Subscribe to multiple channels simultaneously — each channel gets a unique color
+- Real-time message feed via SSE (Server-Sent Events), retains up to 200 messages
+- Publish test messages from the UI — receiver count shown after delivery
+- Auto-scroll toggle to follow incoming messages
+
 ---
 
 ## Requirements
