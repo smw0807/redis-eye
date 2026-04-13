@@ -1,7 +1,7 @@
 <template>
   <div class="dashboard">
     <!-- Sidebar -->
-    <aside class="sidebar">
+    <aside class="sidebar" :style="{ width: sidebarWidth + 'px' }">
       <div class="sidebar-header">
         <div class="brand">
           <span class="brand-icon">⬡</span>
@@ -50,6 +50,9 @@
 
       <KeyList ref="keyListRef" :selected-key="selectedKey" :read-only="readOnly" @select="selectKey" @bulk-deleted="onBulkDeleted" />
     </aside>
+
+    <!-- Resize handle -->
+    <div class="resize-handle" @mousedown="startResize" />
 
     <!-- Main content -->
     <main class="main">
@@ -114,6 +117,35 @@ const readOnly = ref(false);
 const connStatus = ref<'connected' | 'reconnecting' | 'reconnected'>('connected');
 let reconnectedTimer: ReturnType<typeof setTimeout> | null = null;
 let statusPoller: ReturnType<typeof setInterval> | null = null;
+
+const SIDEBAR_MIN = 180;
+const SIDEBAR_MAX = 600;
+const SIDEBAR_DEFAULT = 300;
+const sidebarWidth = ref(Number(localStorage.getItem('redis-eye-sidebar-width')) || SIDEBAR_DEFAULT);
+
+function startResize(e: MouseEvent) {
+  e.preventDefault();
+  const startX = e.clientX;
+  const startWidth = sidebarWidth.value;
+  document.body.style.cursor = 'col-resize';
+  document.body.style.userSelect = 'none';
+
+  function onMove(ev: MouseEvent) {
+    const newWidth = Math.min(SIDEBAR_MAX, Math.max(SIDEBAR_MIN, startWidth + ev.clientX - startX));
+    sidebarWidth.value = newWidth;
+  }
+
+  function onUp() {
+    document.body.style.cursor = '';
+    document.body.style.userSelect = '';
+    localStorage.setItem('redis-eye-sidebar-width', String(sidebarWidth.value));
+    window.removeEventListener('mousemove', onMove);
+    window.removeEventListener('mouseup', onUp);
+  }
+
+  window.addEventListener('mousemove', onMove);
+  window.addEventListener('mouseup', onUp);
+}
 
 async function pollStatus() {
   try {
@@ -241,14 +273,26 @@ onUnmounted(() => {
 
 /* Sidebar */
 .sidebar {
-  width: 300px;
-  min-width: 220px;
-  max-width: 420px;
+  flex-shrink: 0;
   display: flex;
   flex-direction: column;
   background: var(--bg-surface);
-  border-right: 1px solid var(--border);
   overflow: hidden;
+}
+
+.resize-handle {
+  width: 4px;
+  flex-shrink: 0;
+  background: var(--border);
+  cursor: col-resize;
+  transition: background 0.15s;
+  position: relative;
+  z-index: 10;
+}
+
+.resize-handle:hover,
+.resize-handle:active {
+  background: var(--accent, #4a9eff);
 }
 
 .sidebar-header {
