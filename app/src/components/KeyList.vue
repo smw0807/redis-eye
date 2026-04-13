@@ -45,6 +45,13 @@
       >
         ⏱ Expiring
       </button>
+      <select v-model="sortKey" class="sort-select input-field">
+        <option value="name-asc">Name A→Z</option>
+        <option value="name-desc">Name Z→A</option>
+        <option value="type-asc">Type</option>
+        <option value="ttl-asc">TTL ↑</option>
+        <option value="ttl-desc">TTL ↓</option>
+      </select>
     </div>
 
     <!-- Key count / Selection bar -->
@@ -177,8 +184,11 @@ const TYPES = ['string', 'hash', 'list', 'set', 'zset'] as const;
 type RedisType = (typeof TYPES)[number];
 
 const HISTORY_KEY = 'redis-eye-search-history';
+const SORT_KEY = 'redis-eye-sort-key';
 const MAX_HISTORY = 8;
 const EXPIRING_THRESHOLD_MS = 5 * 60 * 1000; // 5 minutes
+
+type SortKey = 'name-asc' | 'name-desc' | 'type-asc' | 'ttl-asc' | 'ttl-desc';
 
 defineProps<{ selectedKey: string | null; readOnly?: boolean }>();
 const emit = defineEmits<{
@@ -199,6 +209,9 @@ const now = ref(Date.now());
 
 const searchHistory = ref<string[]>(JSON.parse(localStorage.getItem(HISTORY_KEY) ?? '[]'));
 const showHistory = ref(false);
+const sortKey = ref<SortKey>((localStorage.getItem(SORT_KEY) as SortKey) ?? 'name-asc');
+
+watch(sortKey, (v) => localStorage.setItem(SORT_KEY, v));
 
 const filteredItems = computed(() => {
   let result = items.value;
@@ -212,7 +225,36 @@ const filteredItems = computed(() => {
       return remaining > 0 && remaining <= EXPIRING_THRESHOLD_MS;
     });
   }
-  return result;
+
+  const sorted = [...result];
+  switch (sortKey.value) {
+    case 'name-asc':
+      sorted.sort((a, b) => a.key.localeCompare(b.key));
+      break;
+    case 'name-desc':
+      sorted.sort((a, b) => b.key.localeCompare(a.key));
+      break;
+    case 'type-asc':
+      sorted.sort((a, b) => a.type.localeCompare(b.type) || a.key.localeCompare(b.key));
+      break;
+    case 'ttl-asc':
+      sorted.sort((a, b) => {
+        if (a.expireAt === -1 && b.expireAt === -1) return a.key.localeCompare(b.key);
+        if (a.expireAt === -1) return 1;
+        if (b.expireAt === -1) return -1;
+        return a.expireAt - b.expireAt;
+      });
+      break;
+    case 'ttl-desc':
+      sorted.sort((a, b) => {
+        if (a.expireAt === -1 && b.expireAt === -1) return a.key.localeCompare(b.key);
+        if (a.expireAt === -1) return -1;
+        if (b.expireAt === -1) return 1;
+        return b.expireAt - a.expireAt;
+      });
+      break;
+  }
+  return sorted;
 });
 
 // ─── Selection ───────────────────────────────────────────────────────────────
@@ -650,6 +692,14 @@ defineExpose({ refresh: applySearch });
   background: color-mix(in srgb, var(--warning) 20%, transparent);
   color: var(--warning);
   border-color: var(--warning);
+}
+
+.sort-select {
+  font-size: 11px;
+  padding: 2px 6px;
+  height: auto;
+  flex-shrink: 0;
+  cursor: pointer;
 }
 
 .type-btn:not(.active):hover {
