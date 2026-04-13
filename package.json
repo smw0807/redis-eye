@@ -1,6 +1,6 @@
 {
   "name": "redis-eye",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "description": "Lightweight Redis GUI — explore your Redis data with a single npx command",
   "main": "server/index.js",
   "bin": {
